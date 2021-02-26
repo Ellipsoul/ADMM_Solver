@@ -1,1 +1,1 @@
-# ADMM_Solver
+# Parrallel Solver for Conic Optimisation Problems using the Alternating Direction Method of Multipliers
