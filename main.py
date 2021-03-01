@@ -1,4 +1,5 @@
 import sympy as sym
+import numpy as np
 from helpers import compileParseMoment
 
 # Define problem size and initialise symbolic variables
@@ -7,7 +8,7 @@ x = sym.Matrix([sym.Symbol(f'x{i}') for i in range(SIZE)])
 
 # Define a polynomial objective function
 objectiveFunction = x.dot(x) - sum(x)
-print(objectiveFunction)
+
 # Define some equality constraints
 equalityConstraints = [ 
     x[0] - x[1]**2,
@@ -22,4 +23,6 @@ inequalityConstraints = [
 ]
 OMEGA = 3  # Define the degree of relaxation
 
-(At, b, c, K) = compileParseMoment(x, objectiveFunction, equalityConstraints, inequalityConstraints, OMEGA)
+numpyX = np.transpose(np.array(x))[0]  # Convert independent variable matrix to numpy array
+
+(At, b, c, K) = compileParseMoment(numpyX, objectiveFunction, equalityConstraints, inequalityConstraints, OMEGA)
