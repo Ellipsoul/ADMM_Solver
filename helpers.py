@@ -2,13 +2,13 @@ import sympy as sym
 import numpy as np
 
 from scipy.sparse.linalg import norm
-from scipy.sparse import csc_matrix, identity
+from scipy.sparse import csc_matrix, identity, triu, csr_matrix
 from sksparse.cholmod import cholesky
 import matplotlib.pylab as plt
 
 import math
 import itertools
-from operator import add
+from operator import add, itemgetter
 
 # Gather all cross-term dependencies for objective function
 def getObjectiveCrossDependencies(obj, x):
@@ -62,7 +62,8 @@ def updateCWithCrossDependencies(crossDependencies, C):
 def cliquesFromSpMatD(C):
     factor = cholesky(C)   # Requires creating this factor object
     L = factor.L()         # Retrieve lower triangular matrix
-    
+    L = csc_matrix([[1, 0, 0], [1, 1, 0], [0, 1, 1]]) # Temporary
+
     cliques = L.copy().tocsr()  # Populate same L matrix, except with ones
     cliques.data.fill(1)
 
@@ -79,17 +80,40 @@ def cliquesFromSpMatD(C):
 
         cliqueResult = cliques[idx[parsedOne], remainIndex].sum()  # Complicated result to retrieve result
 
-        # Check if there actually is a clique here
-        if cliqueResult == numOne:  # SOMETHING MIGHT GO WRONG HERE WITH THIS CHECK
-            remainIndex.append(i)  # Add
+        # Check if any of the cliqueResult values is equal to the number of ones
+        if not isinstance(cliqueResult, list): cliqueResult = [cliqueResult]  # Make iterable if scalar
+        if next((i for i in cliqueResult if i == numOne), None) is None:  
+            remainIndex.append(i)   # Add to the remaining indices
 
-    # Gather clique informatin
-    cliqueSet = cliques[remainIndex, :]
+    # Gather clique information
+    cliqueSet = cliques[:, remainIndex]
     noCliques = len(remainIndex)
     elemInfo = np.argwhere(cliqueSet)
-    elem = [i[1] for i in elemInfo]
-    
-    # TODO: FAILED, FIND OUT WHAT HAPPENED
+    elem = [i[0] for i in elemInfo]
+    noElem = np.squeeze(np.asarray(cliqueSet.sum(axis=0)))
+    maxC = max(noElem)
+    minC = min(noElem)
+
+    # Create upper triangular matrix
+    cliquesUpper = cliques[:, remainIndex]
+    cliquesUpper = triu(cliquesUpper * cliquesUpper.transpose())
+
+    # Gather non-zero entry indices in matrix
+    nonZeroes = np.argwhere(cliquesUpper)
+    nonZeroes = sorted(nonZeroes, key=itemgetter(0, 1))
+
+    s = len(nonZeroes)
+    rows = [i[0] for i in nonZeroes]
+    cols = [i[1] for i in nonZeroes]
+    data = [i for i in range(1, s+1)]
+
+    idxMatrix = csr_matrix((data, (rows, cols)), shape=(n, n))
+
+    cliqueSet = [np.array(elem[:noElem[0]])]
+    for i in range(1, noCliques):
+        idx = sum(noElem[:i])
+        idxs = [(idx + i) for i in range(noElem[i])] 
+        cliqueSet.append(np.array(elem)[idxs])
 
     return 1
 
