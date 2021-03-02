@@ -1,5 +1,11 @@
 import sympy as sym
 import numpy as np
+
+from scipy.sparse.linalg import norm
+from scipy.sparse import csc_matrix, identity
+from sksparse.cholmod import cholesky
+import matplotlib.pylab as plt
+
 import math
 import itertools
 from operator import add
@@ -47,20 +53,27 @@ def updateCWithCrossDependencies(crossDependencies, C):
             i = combination[0]
             j = combination[1]
             C[i, j] = 1
-            C[j, i] = 1  # TODO: What is the MATLAB script actually doing??
+            C[j, i] = 1
     return  # Just updating C, no return value
 
 
 # Main function that generates clique structure from matrix of codependencies
+# A = L * L' reconstructs the original matrix
 def cliquesFromSpMatD(C):
-    # TODO: Continue from here
+    factor = cholesky(C)   # Requires creating this factor object
+    L = factor.L()         # Retrieve lower triangular matrix
+    
+    cliques = L.copy().tocsr()  # Populate same L matrix, except with ones
+    cliques.data.fill(1)
+
+    
 
     return 1
 
 # Main function for gathering cliques
 def corrSparsityCliques(x, obj, constraints):
-    n = len(x)          # Independent variable vector size
-    C = np.identity(n)  # Initialising appropriate identity matrix
+    n = len(x)                     # Independent variable vector size
+    C = identity(n, format='lil')  # Initialising appropriate identity matrix (lil_matrix format)
 
     # Retrieve cross-terms of objective function and update C matrix
     objectiveCrossDependencies = getObjectiveCrossDependencies(obj, x)
@@ -70,10 +83,13 @@ def corrSparsityCliques(x, obj, constraints):
     for constraint in constraints:
         constraintCrossDependencies = getConstraintCodependencies(constraint, x)
         updateCWithCrossDependencies(constraintCrossDependencies, C)
-    
-    cliques = cliquesFromSpMatD(C)  # Large function that will generate clique structure
+   
+    C = csc_matrix(C)                                 # Convert into CSC structure, most efficient for next steps
+    C = C + norm(C, ord=1)*identity(n, format='csc')  # Ensure strict diagonal dominance for C      
 
-    return cliques
+    cliqueStructure = cliquesFromSpMatD(C)  # Large function that will generate clique structure
+
+    return cliqueStructure
 
 # Main function that will return the relaxed optimisation problem
 def compileParseMoment(x, objectiveFunction, equalityConstraints, inequalityConstraints, omega=None):
