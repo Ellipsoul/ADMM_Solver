@@ -66,9 +66,34 @@ def cliquesFromSpMatD(C):
     cliques = L.copy().tocsr()  # Populate same L matrix, except with ones
     cliques.data.fill(1)
 
+    x_index = [i for i in range(C.shape[0])]     # Array of indices
+    n = len(x_index)                             # Length of problem statement
+    remainIndex = [0]                            # Start a list of remaining indices
+
+    # Iterating n-1 times (seems to be skipping the first row and column and moving diagonally)
+    for i in range(1, n):
+        idx = np.array([j for j in range(i, n)])     # Array of ROW indices to check from i until the end
+        one = np.argwhere(cliques[i:, i])  # Returns indices where nonzero values are found (RELATIVE TO SUBMATRIX)
+        parsedOne = [i[0] for i in one]    # Parse to MatLab equivalent one
+        numOne = len(parsedOne)            # Number of ones
+
+        cliqueResult = cliques[idx[parsedOne], remainIndex].sum()  # Complicated result to retrieve result
+
+        # Check if there actually is a clique here
+        if cliqueResult == numOne:  # SOMETHING MIGHT GO WRONG HERE WITH THIS CHECK
+            remainIndex.append(i)  # Add
+
+    # Gather clique informatin
+    cliqueSet = cliques[remainIndex, :]
+    noCliques = len(remainIndex)
+    elemInfo = np.argwhere(cliqueSet)
+    elem = [i[1] for i in elemInfo]
     
+    # TODO: FAILED, FIND OUT WHAT HAPPENED
 
     return 1
+
+    
 
 # Main function for gathering cliques
 def corrSparsityCliques(x, obj, constraints):
