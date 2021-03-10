@@ -2,7 +2,7 @@ from os.path import dirname, join as pjoin
 import scipy.io as sio
 import matplotlib.pylab as plt
 
-from solverhelpers import checkInputs, splitBlocks
+from solverhelpers import checkInputs, splitBlocks, detectCliques
 
 # Read data from file
 mat_fname = './pop_data.mat'
@@ -38,7 +38,9 @@ options = {
 }
 
 checkInputs(At, b, c, K)           # Verify inputs
-splitBlocks(At, b, c, K, options)  # Split semidefinite blocks into smaller connected components
-print(At.count_nonzero())
-plt.spy(At, markersize=0.3)
-plt.show()
+# Split semidefinite blocks into distinct blocks (NOT NECESSARY FOR NOW)
+# (At, b, c, K, options) = splitBlocks(At, b, c, K, options) 
+# options['n'], options['m'] = At.shape
+
+# Detect cliques, dividing up problem into separate sections
+(At_sparse, b_sparse, c_sparse) = detectCliques(At, b, c, K)

@@ -1,8 +1,10 @@
 import scipy
-from scipy.sparse import csc_matrix, kron, vstack
+from scipy.sparse import csc_matrix, kron, vstack, csr_matrix
 import numpy as np
 
+import networkx as nx
 import matplotlib.pylab as plt
+import multiprocessing as mp
 
 # Quick function to check input validity
 def checkInputs(At, b, c, K):
@@ -27,6 +29,8 @@ def checkInputs(At, b, c, K):
     print("All checks passed!")
     return
 
+#---------------------------------------------------------------------------------------------------------------------
+# Section ensures matrices are sparsified and splits blocks appropriately
 
 # Attempts to split semidefinite blocks into smaller connected components
 def splitBlocks(At, b, c, K, options):
@@ -35,22 +39,22 @@ def splitBlocks(At, b, c, K, options):
 
     # Retrive sparsity pattern of semidefinite blocks
     cSemidefinitePattern = c[nVectorConstraints:]
-    AtSemidefinitePettern = At[nVectorConstraints:, :]  # Removing rows in c and At equal to number of vector constraints
-    
+    AtSemidefinitePattern = At[nVectorConstraints:, :]  # Removing rows in c and At equal to number of vector constraints
     SPfromC = cSemidefinitePattern.copy().tocsr()
     SPfromC.data.fill(1)
     
-    SPfromAt = AtSemidefinitePettern.copy().tocsr()
+    SPfromAt = AtSemidefinitePattern.copy().tocsr()
     SPfromAt.data.fill(1)
     
     SP = (SPfromC + csc_matrix(SPfromAt.sum(axis=1))).tocsr()
     SP.data.fill(1)
     
-    # Looping over blocks to find connected components:
+    # Initialising necessary variables
     R, rowCount = [], 0
     C, colCount = [], 0
     dimensions = []
 
+    # Looping over blocks to find connected components:
     for i in range(nMatrixConstraints):
         m = K.s[i]
         B = csc_matrix(SP[rowCount:rowCount+m**2].reshape((m, m), order='C', copy=True))
@@ -112,13 +116,13 @@ def splitBlocks(At, b, c, K, options):
 
     # Finally, aggregate and update problem data
     M = csc_matrix(([1 for _ in range(len(R))], (R, C)), shape=(rowCount, colCount)).transpose()
-    At = vstack([At[:nVectorConstraints, :], M*SPfromAt])
-    c = vstack([c[:nVectorConstraints], M*SPfromC])
+    At = vstack([At[:nVectorConstraints, :], M*AtSemidefinitePattern])
+    c = vstack([c[:nVectorConstraints], M*cSemidefinitePattern])
     K.s = dimensions
 
+    # Retrieve the used variables (sorted but maybe shouldn't be?)
     options['usedvars'] = np.concatenate(([i for i in range(nVectorConstraints)], R+nVectorConstraints))
-
-    return
+    return  (At, b, c, K, options) # Return modified variables to main caller
 
 
 # Helper for splitBlocks to find connected components for the sparsity pattern matrix B
@@ -157,3 +161,41 @@ def findConnectedComponents(B):
     
     nComponents = np.max(tags)                                 # Report number of components and return
     return (tags, nComponents)
+
+#---------------------------------------------------------------------------------------------------------------------
+# Detecting Cliques within Sparse A Matrix
+
+def detectCliques(At, b, c, K):
+
+    # Replace all non-zero data with just ones
+    AtOnes = At.copy().tocsr()
+    AtOnes.data.fill(1)
+
+    # K.f - Fixed, K.l - Linear, K.s[] - Semidefinite
+    # Collapse single matrix constrants into single row
+    AtHead = At[:K.f+K.l, :]   # Initialise new matrix with original equality and inequality constraints
+    collapsedRows = []
+
+    currentIdx = K.f + K.l
+    # Iterate through all PSD constraints
+    for matrixSize in K.s:
+        rowsToExtract = matrixSize ** 2
+        psdConstraint = AtOnes[currentIdx: currentIdx+rowsToExtract, :]   # Retrive the matrix subset
+        collapsedRow = psdConstraint.sum(axis=0)                          # Collapse into a single vector
+        collapsedRows.append(collapsedRow)                                # Store the collapsed row
+
+        currentIdx += rowsToExtract                                       # Increment row counter
+
+    AtCollapsed = vstack([AtHead] + collapsedRows)                        # Stack rows together
+    plt.spy(AtCollapsed)
+    plt.show()
+
+    # Find cliques
+    S = AtCollapsed.transpose() * AtCollapsed                             # Generate matrix of codependencies
+    G = nx.Graph(S)                                                       # Initialise NetworkX graph
+    cliques = list(nx.algorithms.find_cliques(G))                         # Retrieve cliques
+
+    # Extact relevat 
+    print(cliques)
+
+    return (1, 1, 1)
