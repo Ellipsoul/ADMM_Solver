@@ -2,9 +2,7 @@ import scipy
 from scipy.sparse import csc_matrix, kron, vstack, csr_matrix
 import numpy as np
 
-import networkx as nx
 import matplotlib.pylab as plt
-import multiprocessing as mp
 
 # Quick function to check input validity
 def checkInputs(At, b, c, K):
@@ -161,41 +159,3 @@ def findConnectedComponents(B):
     
     nComponents = np.max(tags)                                 # Report number of components and return
     return (tags, nComponents)
-
-#---------------------------------------------------------------------------------------------------------------------
-# Detecting Cliques within Sparse A Matrix
-
-def detectCliques(At, b, c, K):
-
-    # Replace all non-zero data with just ones
-    AtOnes = At.copy().tocsr()
-    AtOnes.data.fill(1)
-
-    # K.f - Fixed, K.l - Linear, K.s[] - Semidefinite
-    # Collapse single matrix constrants into single row
-    AtHead = At[:K.f+K.l, :]   # Initialise new matrix with original equality and inequality constraints
-    collapsedRows = []
-
-    currentIdx = K.f + K.l
-    # Iterate through all PSD constraints
-    for matrixSize in K.s:
-        rowsToExtract = matrixSize ** 2
-        psdConstraint = AtOnes[currentIdx: currentIdx+rowsToExtract, :]   # Retrive the matrix subset
-        collapsedRow = psdConstraint.sum(axis=0)                          # Collapse into a single vector
-        collapsedRows.append(collapsedRow)                                # Store the collapsed row
-
-        currentIdx += rowsToExtract                                       # Increment row counter
-
-    AtCollapsed = vstack([AtHead] + collapsedRows)                        # Stack rows together
-    plt.spy(AtCollapsed)
-    plt.show()
-
-    # Find cliques
-    S = AtCollapsed.transpose() * AtCollapsed                             # Generate matrix of codependencies
-    G = nx.Graph(S)                                                       # Initialise NetworkX graph
-    cliques = list(nx.algorithms.find_cliques(G))                         # Retrieve cliques
-
-    # Extact relevat 
-    print(cliques)
-
-    return (1, 1, 1)
