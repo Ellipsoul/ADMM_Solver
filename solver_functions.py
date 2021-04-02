@@ -67,9 +67,6 @@ def detectCliques(At, b, c, K):
     G = nx.Graph(S)                                        # Initialise NetworkX graph
     cliques = list(nx.algorithms.find_cliques(G))          # Retrieve cliques
 
-    plt.spy(S)
-    plt.show()
-
     # Gather the related At, b, c, K and P arrays for each detected clique
 
     # Initiatlise output values
