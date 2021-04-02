@@ -1,9 +1,12 @@
 from os.path import dirname, join as pjoin
 import scipy.io as sio
+import scipy
 import matplotlib.pylab as plt
 
+import numpy as np
+
 from solver_helpers import checkInputs, splitBlocks, CliqueComponent
-from solver_functions import detectCliques
+from solver_functions import detectCliques, updateYVector, updateZProjection
 
 # Read data from file
 mat_fname = './pop_data.mat'
@@ -41,16 +44,10 @@ options = {
 cliqueComponents = [None for _ in range(numCliques)]
 for i in range(numCliques):
     cliqueComponents[i] = CliqueComponent(At_sparse[i], b_sparse[i], c_sparse[i], K_sparse[i], P_sparse[i], options)
+y = np.ones(shape=(b.shape[0], 1))   # Initialise y vector
 
-# print(At.shape)
-# print(b.shape)
-# print(c.shape)
-# for clique in cliqueComponents:
-#     clique.updateYVector()
-# rightHandSum = sum(cliqueComponent.yUpdateVector for cliqueComponent in cliqueComponents) 
+# Beginning of Solver Iteration
+#-------------------------------------------------------------------------------------------------------------------
 
-# + options['lamb'] * b
-# leftDiagSum = sum(cliqueComponent.L)
-# print(rightHandSum)
-
-# y = np.ones()
+updateYVector(cliqueComponents, y, b, options)
+updateZProjection(cliqueComponents)

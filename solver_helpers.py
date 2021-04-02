@@ -1,5 +1,5 @@
 import scipy
-from scipy.sparse import csc_matrix, kron, vstack, csr_matrix
+from scipy.sparse import csc_matrix, kron, vstack, csr_matrix, dia_matrix
 from scipy.sparse.linalg import inv
 
 import numpy as np
@@ -22,24 +22,28 @@ class CliqueComponent:
 
         # Lagrange multiplier vectors to be updated at each cycle
         self.zeta = np.ones(shape=(self.b.shape[0], 1))
-        self.eta = np.ones(shape=(self.At.shape[1], 1))
+        self.eta = np.ones(shape=(self.c.shape[0], 1))
 
         # Initialise local s vector containing extracted components on the full y vector
         self.s = np.zeros(shape=(self.b.shape[0], 1))
         
         # Initialise local z cost vector for ensuring problem remains conic
         zeroCones = np.zeros(shape=(K["f"], 1))                              # Equality: 0s
-        nnOrthants = np.ones(shape=(K["f"], 1))                              # Inequality: 1s
+        nnOrthants = np.ones(shape=(K["l"], 1))                              # Inequality: 1s
         PSDs = [np.identity(size).reshape((size**2, 1)) for size in K["s"]]  # PSD: identity
         self.z = vstack([zeroCones, nnOrthants, *PSDs])                      # Stack up the vectors for constraints
 
-        self.L = self.rho * self.P.transpose() * self.P                  # Generate static matrix: L = rho_i*Pt*P
+        self.L = self.rho * self.P.transpose() * self.P                      # Generate static matrix: L = rho_i*Pt*P
+        self.yUpdateVector = self.P.transpose() * (self.zeta + self.rho * self.s)    # Initialise first y updating value
 
-        # self.yUpdateVector = self.P.transpose() * (self.zeta + self.rho * self.s)    # Initialise first y updating value
 
     # Generate righthand local value for minimising with respect ot y
-    def updateYVector(self):
+    def updateYUpdateVector(self):
         self.yUpdateVector = self.P.transpose() * (self.zeta + self.rho * self.s)
+
+    # Update L diagonal matrix (if code needs to be extended to vary rho)
+    def updateLMatrix(self):
+        self.L = self.rho * self.P.transpose() * self.P    # Update L (if rho is programmed to be dynamic)
 
 
 # Helper function to vectorise a matrix, taking in a sparse matrix
@@ -68,7 +72,6 @@ def checkInputs(At, b, c, K):
     K.s = K.s[0]
 
     # Add more checks later, if necessary
-    print("All checks passed!\n")
     return
 
 #---------------------------------------------------------------------------------------------------------------------
@@ -201,5 +204,5 @@ def findConnectedComponents(B):
         
         unexploredIdxs = np.where(tags==0)[0]               # Update unexplored indices
     
-    nComponents = np.max(tags)                                 # Report number of components and return
+    nComponents = np.max(tags)                              # Report number of components and return
     return (tags, nComponents)
