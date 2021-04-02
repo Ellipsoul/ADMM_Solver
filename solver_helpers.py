@@ -1,8 +1,52 @@
 import scipy
 from scipy.sparse import csc_matrix, kron, vstack, csr_matrix
-import numpy as np
+from scipy.sparse.linalg import inv
 
+import numpy as np
 import matplotlib.pylab as plt
+
+# Class to wrap all variables within each subproblem
+class CliqueComponent:
+    def __init__(self, At, b, c, K, P, options):
+        # Problem statement components
+        self.At = At
+        self.b = b
+        self.c = c
+        self.K = K
+        self.P = P
+        
+        # Useful constants
+        self.rho = options["rho"]
+        self.sigma = options["sigma"]
+        self.lamb = options["lamb"]
+
+        # Lagrange multiplier vectors to be updated at each cycle
+        self.zeta = np.ones(shape=(self.b.shape[0], 1))
+        self.eta = np.ones(shape=(self.At.shape[1], 1))
+
+        # Initialise local s vector containing extracted components on the full y vector
+        self.s = np.zeros(shape=(self.b.shape[0], 1))
+        
+        # Initialise local z cost vector for ensuring problem remains conic
+        zeroCones = np.zeros(shape=(K["f"], 1))                              # Equality: 0s
+        nnOrthants = np.ones(shape=(K["f"], 1))                              # Inequality: 1s
+        PSDs = [np.identity(size).reshape((size**2, 1)) for size in K["s"]]  # PSD: identity
+        self.z = vstack([zeroCones, nnOrthants, *PSDs])                      # Stack up the vectors for constraints
+
+        self.L = self.rho * self.P.transpose() * self.P                  # Generate static matrix: L = rho_i*Pt*P
+
+        # self.yUpdateVector = self.P.transpose() * (self.zeta + self.rho * self.s)    # Initialise first y updating value
+
+    # Generate righthand local value for minimising with respect ot y
+    def updateYVector(self):
+        self.yUpdateVector = self.P.transpose() * (self.zeta + self.rho * self.s)
+
+
+# Helper function to vectorise a matrix, taking in a sparse matrix
+def vectoriseMatrix(M):
+    n = M.shape[0]**2               # Length of long vector
+    M.reshape((1, n), copy=True)    # Reshape matrix in place with no return value
+    return M
 
 # Quick function to check input validity
 def checkInputs(At, b, c, K):
@@ -23,8 +67,8 @@ def checkInputs(At, b, c, K):
     K.l = K.l[0, 0]
     K.s = K.s[0]
 
-    # TODO: Add more checks for dimension length etc... later
-    print("All checks passed!")
+    # Add more checks later, if necessary
+    print("All checks passed!\n")
     return
 
 #---------------------------------------------------------------------------------------------------------------------

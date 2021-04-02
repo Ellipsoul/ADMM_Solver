@@ -2,7 +2,7 @@ from os.path import dirname, join as pjoin
 import scipy.io as sio
 import matplotlib.pylab as plt
 
-from solver_helpers import checkInputs, splitBlocks
+from solver_helpers import checkInputs, splitBlocks, CliqueComponent
 from solver_functions import detectCliques
 
 # Read data from file
@@ -16,28 +16,41 @@ b = mat_contents['b']
 c = mat_contents['c']        # c
 K = mat_contents['K'][0,0]   # Class object with attributes f, l, q and s
 
-# Changeable options for the solver
-options = {
-    "solver": 'hsde',           # Solver type (keep just one for now)
-    "relTol": 1.0000e-04,       #
-    "verbose": 1,               # Additional comments during solver running
-    "maxIter": 1000,            # Maximum number of iteration
-    "rho": 1,                   # Rho penalty parameter
-    "adaptive": 1,              #
-    "mu": 2,                    # 
-    "nu": 10,                   # 
-    "alpha": 1.8000,            #
-}
-
 checkInputs(At, b, c, K)           # Verify inputs
 
 # Split semidefinite blocks into distinct blocks (NOT NECESSARY FOR NOW)
 # (At, b, c, K, options) = splitBlocks(At, b, c, K, options) 
 # options['n'], options['m'] = At.shape
 
-# Detect cliques, dividing up problem into separate sections
-# These should be arrays of matrices/vectors
-(At_sparse, b_sparse, c_sparse, K_sparse) = detectCliques(At, b, c, K)
+# Detect cliques, decomposing problem into separate parallel parts
+# Each variable will be a list of options
+(At_sparse, b_sparse, c_sparse, K_sparse, P_sparse, numCliques) = detectCliques(At, b, c, K)
 
+# Definable options
+options = {
+    "maxIter": 1000,            # Maximum number of iterations
+    "relTol": 1.0000e-04,       # Relative tolerance parameter for 
+    "rho": 10,                  # Penalty parameter for objective function
+    "sigma": 10,                # Penalty parameter for constraints
+    "eta0": 1,                  # Initial eta vector values
+    "zeta0": 1,                 # Initiali zeta vector values
+    "lamb": 0.5                 # Default relative weighting for cost
+}
 
+# Initialise list of CliqueComponent classes for each clique
+cliqueComponents = [None for _ in range(numCliques)]
+for i in range(numCliques):
+    cliqueComponents[i] = CliqueComponent(At_sparse[i], b_sparse[i], c_sparse[i], K_sparse[i], P_sparse[i], options)
 
+# print(At.shape)
+# print(b.shape)
+# print(c.shape)
+# for clique in cliqueComponents:
+#     clique.updateYVector()
+# rightHandSum = sum(cliqueComponent.yUpdateVector for cliqueComponent in cliqueComponents) 
+
+# + options['lamb'] * b
+# leftDiagSum = sum(cliqueComponent.L)
+# print(rightHandSum)
+
+# y = np.ones()
