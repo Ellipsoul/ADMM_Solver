@@ -6,7 +6,7 @@ import matplotlib.pylab as plt
 import numpy as np
 
 from solver_helpers import checkInputs, splitBlocks, CliqueComponent
-from solver_functions import detectCliques, updateYVector, updateZProjection
+from solver_functions import detectCliques, updateYVector, updateZProjection, updateSVector, updateLagrangeMultipliers
 
 # Read data from file
 mat_fname = './pop_data.mat'
@@ -51,3 +51,5 @@ y = np.ones(shape=(b.shape[0], 1))   # Initialise y vector
 
 updateYVector(cliqueComponents, y, b, options)
 updateZProjection(cliqueComponents)
+updateSVector(cliqueComponents, y)
+updateLagrangeMultipliers(cliqueComponents, y)

@@ -1,5 +1,5 @@
 import scipy
-from scipy.sparse import csc_matrix, kron, vstack, csr_matrix, dia_matrix
+from scipy.sparse import csc_matrix, kron, vstack, csr_matrix, dia_matrix, identity, csc_matrix
 from scipy.sparse.linalg import inv
 
 import numpy as np
@@ -33,9 +33,13 @@ class CliqueComponent:
         PSDs = [np.identity(size).reshape((size**2, 1)) for size in K["s"]]  # PSD: identity
         self.z = vstack([zeroCones, nnOrthants, *PSDs])                      # Stack up the vectors for constraints
 
-        self.L = self.rho * self.P.transpose() * self.P                      # Generate static matrix: L = rho_i*Pt*P
-        self.yUpdateVector = self.P.transpose() * (self.zeta + self.rho * self.s)    # Initialise first y updating value
+        # Generate matrix: L = rho_i*Pt*P (static if rho kept constant)
+        self.L = self.rho * self.P.transpose() * self.P                      
+        # Generate matrix: R = rho * I + sigma * A * At (static if rho and sigma kept constant), and its inverse
+        self.R = csc_matrix(self.rho * identity(len(self.s)) + self.sigma * self.At.transpose() * self.At)
+        self.Rinv = scipy.sparse.linalg.inv(self.R)
 
+        self.yUpdateVector = self.P.transpose() * (self.zeta + self.rho * self.s)    # Initialise first y updating value
 
     # Generate righthand local value for minimising with respect ot y
     def updateYUpdateVector(self):
@@ -44,6 +48,12 @@ class CliqueComponent:
     # Update L diagonal matrix (if code needs to be extended to vary rho)
     def updateLMatrix(self):
         self.L = self.rho * self.P.transpose() * self.P    # Update L (if rho is programmed to be dynamic)
+
+    # Update R matrix and corresponding inverse (in use only when rho and/or sigma is dynamic)
+    def updateRMatrix(self):
+        self.R = csc_matrix(self.rho * identity(len(self.s)) + self.sigma * self.At.transpose() * self.At)
+        self.Rinv = scipy.sparse.linalg.inv(self.R)
+
 
 
 # Helper function to vectorise a matrix, taking in a sparse matrix

@@ -122,7 +122,7 @@ def detectCliques(At, b, c, K):
     bAsArray = np.squeeze(np.array(b.todense()))       # Convert b sparse matrix into usable divisor
     bToSplit = np.divide(bAsArray, yOccurrencesDiag)   # Elementwise division
 
-    for i in range(len(cliques)): b_sparse[i] = bToSplit[cliques[i]]  # Populate b vectors
+    for i in range(len(cliques)): b_sparse[i] = np.matrix([bToSplit[cliques[i]]]).transpose()  # Populate b vectors (np.matrix)
 
     return (At_sparse, b_sparse, c_sparse, K_sparse, P_sparse, len(cliques))
 
@@ -137,23 +137,37 @@ def updateYVector(cliqueComponents, y, b, options):
     righthandVectorSum = sum(clique.yUpdateVector for clique in cliqueComponents) + options['lamb'] * b
 
     # Gather lefthand matarix inverse
-    lefthandMatrixSum = sum(clique.L for clique in cliqueComponents)              # Sum lefthand diagonal matrix                 
-    diagReciprocals = np.reciprocal(lefthandMatrixSum.data)     # Gather reciprocals of diagonal
+    lefthandMatrixSum = sum(clique.L for clique in cliqueComponents) # Sum lefthand diagonal matrix                 
+    diagReciprocals = np.reciprocal(lefthandMatrixSum.data)          # Gather reciprocals of diagonal
     nDiag = len(diagReciprocals)
     Linv = scipy.sparse.dia_matrix((diagReciprocals, [0]), shape=(nDiag, nDiag))  # Create matrix inverse
 
     y = Linv * righthandVectorSum  # Update y vector (Might be a better way to do this)
 
 
-# Z vector conic projection step
+# z vector conic projection step
 def updateZProjection(cliqueComponents):
     for clique in cliqueComponents:  # Iterate through all cliques
         vectorToProject = clique.c - clique.At * clique.s - 1/clique.sigma * clique.eta  # Vector for conic projection
 
         # TODO: What is the NN orthant projections for? Seems like only cones or single values
-        print(vectorToProject)
-        print(clique.K)
-        print('')
+        # print(vectorToProject)
+        # print(clique.K)
+        # print('')
 
 
-#
+# s vector update (currently using static inverse matrix)
+def updateSVector(cliqueComponents, y):
+    # Iterate through all cliques (can be performed in parallel)
+    for cl in cliqueComponents:
+        # Calculate column vector on righthand of equation
+        rightHandSide = cl.rho * cl.P * y + ( cl.sigma * cl.At.transpose() ) * (cl.c - cl.z + 1/cl.sigma * cl.eta) - cl.zeta + (1-cl.lamb) * cl.b
+        # Update s vector with s = R^-1 * RHS
+        cl.s = cl.Rinv * rightHandSide
+
+
+# Lagrange multiplier update, computationally simple task
+def updateLagrangeMultipliers(cliqueComponents, y):
+     for clique in cliqueComponents:
+        clique.eta += clique.sigma * (clique.c - clique.At*clique.s - clique.z)  # Update eta
+        clique.zeta += clique.rho * (clique.s - clique.P * y                     # Update zeta
