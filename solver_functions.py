@@ -1,11 +1,14 @@
 import scipy
 import math
 from scipy.sparse import csc_matrix, kron, vstack, csr_matrix, lil_matrix
+from scipy.linalg import eigh
 import numpy as np
 from operator import itemgetter
 
 import networkx as nx
 import matplotlib.pylab as plt
+
+from solver_helpers import vectoriseMatrix, matriciseVector
 
 #---------------------------------------------------------------------------------------------------------------------
 # Detecting Cliques within Sparse A Matrix
@@ -122,7 +125,13 @@ def detectCliques(At, b, c, K):
     bAsArray = np.squeeze(np.array(b.todense()))       # Convert b sparse matrix into usable divisor
     bToSplit = np.divide(bAsArray, yOccurrencesDiag)   # Elementwise division
 
-    for i in range(len(cliques)): b_sparse[i] = np.matrix([bToSplit[cliques[i]]]).transpose()  # Populate b vectors (np.matrix)
+    for i in range(len(cliques)): 
+        # This shows that it might actually be correct
+        # print(cliques[i])
+        # print(bToSplit)
+        # print(bToSplit[cliques[i]])
+        # print('')
+        b_sparse[i] = np.matrix([bToSplit[cliques[i]]]).transpose()  # Populate b vectors (np.matrix)
 
     return (At_sparse, b_sparse, c_sparse, K_sparse, P_sparse, len(cliques))
 
@@ -136,24 +145,78 @@ def updateYVector(cliqueComponents, y, b, options):
      # Sum righthand vector
     righthandVectorSum = sum(clique.yUpdateVector for clique in cliqueComponents) + options['lamb'] * b
 
-    # Gather lefthand matarix inverse
+    # Gather lefthand matrix inverse
+    # TODO: Don't recalculate this at every step, since it's constants just precalculate it
     lefthandMatrixSum = sum(clique.L for clique in cliqueComponents) # Sum lefthand diagonal matrix                 
     diagReciprocals = np.reciprocal(lefthandMatrixSum.data)          # Gather reciprocals of diagonal
     nDiag = len(diagReciprocals)
     Linv = scipy.sparse.dia_matrix((diagReciprocals, [0]), shape=(nDiag, nDiag))  # Create matrix inverse
 
     y = Linv * righthandVectorSum  # Update y vector (Might be a better way to do this)
-
+    
+    return y
 
 # z vector conic projection step
 def updateZProjection(cliqueComponents):
     for clique in cliqueComponents:  # Iterate through all cliques
         vectorToProject = clique.c - clique.At * clique.s - 1/clique.sigma * clique.eta  # Vector for conic projection
+        projectCones(vectorToProject, clique.K)  # Pass to vector projector
 
-        # TODO: What is the NN orthant projections for? Seems like only cones or single values
-        # print(vectorToProject)
-        # print(clique.K)
-        # print('')
+
+# Helper for conic projection of full vector
+def projectCones(vector, K):
+    projectZeroCone(vector[:K['f'], ])                     # Pass zero cone portion to helper
+    projectNNOrthantCone(vector[K['f']:K['f']+K['l'], ])   # Pass NN Orthant portion to helper
+    ptr = K['f']+K['l']
+    for PSDSize in K['s']:
+        ptr2 = ptr + PSDSize ** 2
+        vector[ptr:ptr2] = projectPSDCone(vector[ptr:ptr2])
+        ptr = ptr2
+
+# Zero Cone Projection (Every large vector will have only one zero cone of some length)
+def projectZeroCone(vector):
+    vector[:, :] = 0
+
+# Non-Negative Orthant Projection (Also only a single cone per clique, passed as a vector)
+def projectNNOrthantCone(vector):
+    vector[vector<0] = 0
+
+# Positive Semidefinite Cone (There may be multiple of these cones within a clique)
+def projectPSDCone(vector):
+    M = matriciseVector(vector)     # Convert to matrix form
+
+    M = np.true_divide(M, 2)
+    M = M + M.transpose()
+
+    E, U = eigh(M)                   # After processing, find eigenvalues and eigenvectors
+    ind = [i for i in range(len(E)) if E[i] > 0]
+    UsE = U[:, ind] * np.sqrt(E[ind])
+    S = np.matmul(UsE, UsE.transpose())
+
+    v = vectoriseMatrix(S).transpose()
+    return v
+
+"""
+
+POSITIVE SEMIDEFINITE CONE
+function [S,nPosEigs] = projectPSD(S)    
+    matrix case
+    S = S./2;
+    S = S+S.';
+    [U,E] = eig(S);
+    ind = diag(E)>0;
+    UsE = U(:,ind)*sqrt(E(ind,ind));
+    S   = UsE*UsE.';
+
+    EXPANDING
+    UsE = U(:,ind)*sqrt(E(ind,ind)) * ( U(:,ind)*sqrt(E(ind,ind)) )^T
+        = U(:,ind) * sqrt(E(ind,ind)) * sqrt(E(ind,ind))^T *  U(:,ind)^T
+        = U(:,ind) * E(ind,ind) * U(:,ind)^T
+
+    nPosEigs = nnz(ind);   
+end
+
+"""
 
 
 # s vector update (currently using static inverse matrix)
@@ -170,4 +233,4 @@ def updateSVector(cliqueComponents, y):
 def updateLagrangeMultipliers(cliqueComponents, y):
      for clique in cliqueComponents:
         clique.eta += clique.sigma * (clique.c - clique.At*clique.s - clique.z)  # Update eta
-        clique.zeta += clique.rho * (clique.s - clique.P * y                     # Update zeta
+        clique.zeta += clique.rho * (clique.s - clique.P * y)                    # Update zeta

@@ -1,6 +1,7 @@
 import scipy
 from scipy.sparse import csc_matrix, kron, vstack, csr_matrix, dia_matrix, identity, csc_matrix
 from scipy.sparse.linalg import inv
+import math
 
 import numpy as np
 import matplotlib.pylab as plt
@@ -55,12 +56,17 @@ class CliqueComponent:
         self.Rinv = scipy.sparse.linalg.inv(self.R)
 
 
-
 # Helper function to vectorise a matrix, taking in a sparse matrix
 def vectoriseMatrix(M):
     n = M.shape[0]**2               # Length of long vector
-    M.reshape((1, n), copy=True)    # Reshape matrix in place with no return value
-    return M
+    return M.reshape((1, n))        # Reshape matrix in place with no return value
+
+
+# Helper function for converting a vector back into a square matrix
+def matriciseVector(v):
+    n = int(math.sqrt(v.shape[0]))
+    return v.reshape((n, n))
+
 
 # Quick function to check input validity
 def checkInputs(At, b, c, K):

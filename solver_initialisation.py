@@ -46,10 +46,14 @@ for i in range(numCliques):
     cliqueComponents[i] = CliqueComponent(At_sparse[i], b_sparse[i], c_sparse[i], K_sparse[i], P_sparse[i], options)
 y = np.ones(shape=(b.shape[0], 1))   # Initialise y vector
 
-# Beginning of Solver Iteration
+# Main ADMM Solver Iteration
 #-------------------------------------------------------------------------------------------------------------------
 
-updateYVector(cliqueComponents, y, b, options)
-updateZProjection(cliqueComponents)
-updateSVector(cliqueComponents, y)
-updateLagrangeMultipliers(cliqueComponents, y)
+for i in range(1000):
+    y = updateYVector(cliqueComponents, y, b, options)
+    print(i)
+    print(y)
+    print('')
+    updateZProjection(cliqueComponents)
+    updateSVector(cliqueComponents, y)
+    updateLagrangeMultipliers(cliqueComponents, y)
