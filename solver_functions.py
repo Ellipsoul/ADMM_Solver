@@ -1,7 +1,7 @@
 import scipy
 import math
 from scipy.sparse import csc_matrix, kron, vstack, csr_matrix, lil_matrix
-from scipy.linalg import eigh
+from scipy.linalg import eigh, cho_solve
 import numpy as np
 from operator import itemgetter
 
@@ -9,6 +9,8 @@ import networkx as nx
 import matplotlib.pylab as plt
 
 from solver_helpers import vectoriseMatrix, matriciseVector
+
+# TODO: Create class for solution and problem data, so all functions can act on those
 
 #---------------------------------------------------------------------------------------------------------------------
 # Detecting Cliques within Sparse A Matrix
@@ -126,11 +128,6 @@ def detectCliques(At, b, c, K):
     bToSplit = np.divide(bAsArray, yOccurrencesDiag)   # Elementwise division
 
     for i in range(len(cliques)): 
-        # This shows that it might actually be correct
-        # print(cliques[i])
-        # print(bToSplit)
-        # print(bToSplit[cliques[i]])
-        # print('')
         b_sparse[i] = np.matrix([bToSplit[cliques[i]]]).transpose()  # Populate b vectors (np.matrix)
 
     return (At_sparse, b_sparse, c_sparse, K_sparse, P_sparse, len(cliques))
@@ -156,11 +153,16 @@ def updateYVector(cliqueComponents, y, b, options):
     
     return y
 
+
 # z vector conic projection step
-def updateZProjection(cliqueComponents):
+def updateZProjection(cliqueComponents, options):
     for clique in cliqueComponents:  # Iterate through all cliques
         vectorToProject = clique.c - clique.At * clique.s - 1/clique.sigma * clique.eta  # Vector for conic projection
-        projectCones(vectorToProject, clique.K)  # Pass to vector projector
+        zNew = projectCones(vectorToProject, clique.K)                                   # Generate updated z vector
+        # TODO: NOT THE RIGHT DRES
+        # n Cliques => n + 1 dual residuals, 2n + 1 primals
+        clique.dualResidual = np.linalg.norm(clique.At.transpose() * (clique.z - zNew))  # Update local residual
+        clique.z = zNew                                                                  # Pass updated z vector    
 
 
 # Helper for conic projection of full vector
@@ -172,6 +174,7 @@ def projectCones(vector, K):
         ptr2 = ptr + PSDSize ** 2
         vector[ptr:ptr2] = projectPSDCone(vector[ptr:ptr2])
         ptr = ptr2
+    return vector
 
 # Zero Cone Projection (Every large vector will have only one zero cone of some length)
 def projectZeroCone(vector):
@@ -184,9 +187,7 @@ def projectNNOrthantCone(vector):
 # Positive Semidefinite Cone (There may be multiple of these cones within a clique)
 def projectPSDCone(vector):
     M = matriciseVector(vector)     # Convert to matrix form
-
-    M = np.true_divide(M, 2)
-    M = M + M.transpose()
+    M = 0.5 * (M + M.transpose())   # Ensure perfectly symmetric matrix
 
     E, U = eigh(M)                   # After processing, find eigenvalues and eigenvectors
     ind = [i for i in range(len(E)) if E[i] > 0]
@@ -196,28 +197,6 @@ def projectPSDCone(vector):
     v = vectoriseMatrix(S).transpose()
     return v
 
-"""
-
-POSITIVE SEMIDEFINITE CONE
-function [S,nPosEigs] = projectPSD(S)    
-    matrix case
-    S = S./2;
-    S = S+S.';
-    [U,E] = eig(S);
-    ind = diag(E)>0;
-    UsE = U(:,ind)*sqrt(E(ind,ind));
-    S   = UsE*UsE.';
-
-    EXPANDING
-    UsE = U(:,ind)*sqrt(E(ind,ind)) * ( U(:,ind)*sqrt(E(ind,ind)) )^T
-        = U(:,ind) * sqrt(E(ind,ind)) * sqrt(E(ind,ind))^T *  U(:,ind)^T
-        = U(:,ind) * E(ind,ind) * U(:,ind)^T
-
-    nPosEigs = nnz(ind);   
-end
-
-"""
-
 
 # s vector update (currently using static inverse matrix)
 def updateSVector(cliqueComponents, y):
@@ -225,12 +204,14 @@ def updateSVector(cliqueComponents, y):
     for cl in cliqueComponents:
         # Calculate column vector on righthand of equation
         rightHandSide = cl.rho * cl.P * y + ( cl.sigma * cl.At.transpose() ) * (cl.c - cl.z + 1/cl.sigma * cl.eta) - cl.zeta + (1-cl.lamb) * cl.b
-        # Update s vector with s = R^-1 * RHS
-        cl.s = cl.Rinv * rightHandSide
+        # Update s vector by solving the prefactored cholesky matrix
+        cl.s = cho_solve((cl.R_chol, cl.low), rightHandSide)
 
 
-# Lagrange multiplier update, computationally simple task
+# Lagrange multiplier update, computationally simple task (+ update primary residual for each clique)
 def updateLagrangeMultipliers(cliqueComponents, y):
      for clique in cliqueComponents:
-        clique.eta += clique.sigma * (clique.c - clique.At*clique.s - clique.z)  # Update eta
-        clique.zeta += clique.rho * (clique.s - clique.P * y)                    # Update zeta
+        clique.eta += clique.sigma * (clique.c - clique.At*clique.s - clique.z)              # Update eta
+        clique.zeta += clique.rho * (clique.s - clique.P * y)                                # Update zeta
+        # TODO: NOT THE RIGHT PRES
+        clique.primaryResidual = np.linalg.norm(clique.At * clique.s + clique.z - clique.c)  # Update primary residual
