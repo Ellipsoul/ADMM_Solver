@@ -6,7 +6,8 @@ import matplotlib.pylab as plt
 import numpy as np
 
 from solver_helpers import checkInputs, splitBlocks, CliqueComponent
-from solver_functions import detectCliques, updateYVector, updateZProjection, updateSVector, updateLagrangeMultipliers
+from solver_functions import ( detectCliques, updateYVector, updateZProjection, updateSVector, 
+    updateLagrangeMultipliers)
 
 # Read data from file
 mat_fname = './pop_data.mat'
@@ -31,7 +32,7 @@ checkInputs(At, b, c, K)           # Verify inputs
 
 # Definable options
 options = {
-    "maxIter": 1000,            # Maximum number of iterations
+    "maxIter": 50,               # Maximum number of iterations
     "relTol": 1.0000e-04,       # Relative tolerance parameter for 
     "rho": 10,                  # Penalty parameter for objective function
     "sigma": 10,                # Penalty parameter for constraints
@@ -49,11 +50,11 @@ y = np.ones(shape=(b.shape[0], 1))   # Initialise y vector
 # Main ADMM Solver Iteration
 #-------------------------------------------------------------------------------------------------------------------
 
-for i in range(1000):
-    y = updateYVector(cliqueComponents, y, b, options)
-    print(i)
+# Run algorithm
+for i in range(options['maxIter']):
+    y = updateYVector(cliqueComponents, y, b, options)          # Update y vector
     print(y)
     print('')
-    updateZProjection(cliqueComponents)
-    updateSVector(cliqueComponents, y)
-    updateLagrangeMultipliers(cliqueComponents, y)
+    updateZProjection(cliqueComponents, options)                # Update z vector conic projection
+    updateSVector(cliqueComponents, y)                          # Update s vector
+    updateLagrangeMultipliers(cliqueComponents, y)              # Update Lagrange multipliers
