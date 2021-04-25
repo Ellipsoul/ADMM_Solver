@@ -14,7 +14,7 @@ import time
 # Update Y (solve system)
 def updateY(sol, At, b, c, K, options):
     t0 = time.process_time()
-    rhs = At.transpose() * ( c - sol.z - sol.x/options.rho  ) - b/options.rho
+    rhs = At.transpose() * ( c - sol.z - sol.x/options.rho  ) + b/options.rho
     # sol.y = scipy.sparse.linalg.spsolve(H,rhs) # this is extremely ugly: should factorize beforehand!
     sol.y = sol.KKT.solve_A(rhs)
     sol.y = sol.y.reshape(sol.y.shape[0],1) # this is very ugly!
@@ -90,6 +90,17 @@ def displayIteration(i, sol):
 ###############################################################################
 # Main solver
 def admmSolverNoSplitting(At, b, c, K):
+    """
+    Solve conic problem in standard dual form using ADMM.
+
+    The problem takes the form
+
+        min   -b'*y
+        s.t.   c - At*y ∈ K
+
+    where y \in R^m and K is a product of the zero cone, the nonnegative orthant,
+    and spositive semidefinite cones.
+    """
 
     # Start the clock
     t = time.process_time()
@@ -127,7 +138,7 @@ def admmSolverNoSplitting(At, b, c, K):
         updateY(sol, At, b, c, K, options)
         updateZ(sol, At, b, c, K, options)
         updateX(sol, At, b, c, K, options)
-        sol.cost = b.transpose() * sol.y
+        sol.cost = -b.transpose() * sol.y
 
 
     # Terminate main function
