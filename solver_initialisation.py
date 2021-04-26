@@ -32,7 +32,7 @@ checkInputs(At, b, c, K)           # Verify inputs
 
 # Definable options
 options = {
-    "maxIter": 50,               # Maximum number of iterations
+    "maxIter": 1000,               # Maximum number of iterations
     "relTol": 1.0000e-04,       # Relative tolerance parameter for 
     "rho": 10,                  # Penalty parameter for objective function
     "sigma": 10,                # Penalty parameter for constraints

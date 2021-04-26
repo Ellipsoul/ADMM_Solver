@@ -45,7 +45,7 @@ def detectCliques(At, b, c, K):
 
     # K.f - Fixed, K.l - Linear, K.s[] - Semidefinite
     # Collapse single matrix constrants into single row
-    AtHead = At[:K.f+K.l, :]   # Matrix of equality + inequality constraints to be stacked with collapsed PSDs
+    AtHead = AtOnes[:K.f+K.l, :]   # Matrix of equality + inequality constraints to be stacked with collapsed PSDs
     collapsedRows = []
     
     currentIdx = K.f + K.l
@@ -53,10 +53,11 @@ def detectCliques(At, b, c, K):
     ptr = K.f + K.l
     for matrixSize in K.s:
         rowsToExtract = matrixSize ** 2
-        psdConstraint = AtOnes[currentIdx: currentIdx+rowsToExtract, :]         # Retrive the matrix subset
+        psdConstraint = At[currentIdx: currentIdx+rowsToExtract, :]             # Retrive the matrix subset
         cConstraint = c[currentIdx: currentIdx+rowsToExtract]                   # Retrive c vector subset
 
-        collapsedRow = psdConstraint.sum(axis=0)                                # Collapse into a single vector
+        collapsedRow = AtOnes[currentIdx: currentIdx+rowsToExtract, :]
+        collapsedRow = collapsedRow.sum(axis=0)                                 # Collapse into a single vector
         collapsedRows.append(collapsedRow)                                      # Store the collapsed row
 
         nonZeroIndices = set(np.nonzero(psdConstraint)[1])                      # Generate set of nonzero indices in constraint
@@ -71,6 +72,8 @@ def detectCliques(At, b, c, K):
     S = AtCollapsed.transpose() * AtCollapsed              # Generate matrix of codependencies
     G = nx.Graph(S)                                        # Initialise NetworkX graph
     cliques = list(nx.algorithms.find_cliques(G))          # Retrieve cliques
+
+    for i in range(len(cliques)): cliques[i] = np.sort(cliques[i])
 
     # Gather the related At, b, c, K and P arrays for each detected clique
 
@@ -139,12 +142,12 @@ def updateYVector(cliqueComponents, y, b, options):
         clique.updateYUpdateVector()          # Update righthand side of linear system
         clique.updateLMatrix()                # Update lefthand side of linear system (if required)
 
-     # Sum righthand vector
+    # Sum righthand vector
     righthandVectorSum = sum(clique.yUpdateVector for clique in cliqueComponents) + options['lamb'] * b
 
     # Gather lefthand matrix inverse
     # TODO: Don't recalculate this at every step, since it's constants just precalculate it
-    lefthandMatrixSum = sum(clique.L for clique in cliqueComponents) # Sum lefthand diagonal matrix                 
+    lefthandMatrixSum = sum(clique.L for clique in cliqueComponents) # Sum lefthand diagonal matrix
     diagReciprocals = np.reciprocal(lefthandMatrixSum.data)          # Gather reciprocals of diagonal
     nDiag = len(diagReciprocals)
     Linv = scipy.sparse.dia_matrix((diagReciprocals, [0]), shape=(nDiag, nDiag))  # Create matrix inverse
@@ -157,7 +160,7 @@ def updateYVector(cliqueComponents, y, b, options):
 # z vector conic projection step
 def updateZProjection(cliqueComponents, options):
     for clique in cliqueComponents:  # Iterate through all cliques
-        vectorToProject = clique.c - clique.At * clique.s - 1/clique.sigma * clique.eta  # Vector for conic projection
+        vectorToProject = clique.c - clique.At * clique.s + 1/clique.sigma * clique.eta  # Vector for conic projection
         zNew = projectCones(vectorToProject, clique.K)                                   # Generate updated z vector
         # TODO: NOT THE RIGHT DRES
         # n Cliques => n + 1 dual residuals, 2n + 1 primals

@@ -2,6 +2,7 @@ import scipy
 from scipy.sparse import csc_matrix, kron, vstack, csr_matrix, dia_matrix, identity, csc_matrix
 from scipy.sparse.linalg import inv
 from scipy.linalg import cho_factor
+from sksparse.cholmod import cholesky_AAt
 import math
 
 import numpy as np
@@ -46,7 +47,7 @@ class CliqueComponent:
 
         self.yUpdateVector = self.P.transpose() * (self.zeta + self.rho * self.s)    # Initialise first y updating value
 
-        # Initialise initial primary and dual residuals
+        # Initialise initial primary and dual residuals  TODO: Fix this!
         self.primaryResidual = np.linalg.norm(self.c - self.At*self.s - self.z)
         self.dualResidual = float("inf")
 
@@ -59,6 +60,7 @@ class CliqueComponent:
         self.L = self.rho * self.P.transpose() * self.P    # Update L (if rho is programmed to be dynamic)
 
     # Update R matrix and corresponding inverse (in use only when rho and/or sigma is dynamic)
+    # TODO: This should eventually be changed to use KKT prefactorisation
     def updateRMatrix(self):
         self.R = csc_matrix(self.rho * identity(len(self.s)) + self.sigma * self.At.transpose() * self.At)
         self.Rinv = scipy.sparse.linalg.inv(self.R)
