@@ -1,8 +1,7 @@
 import scipy
 from scipy.sparse import csc_matrix, kron, vstack, csr_matrix, dia_matrix, identity, csc_matrix
 from scipy.sparse.linalg import inv
-from scipy.linalg import cho_factor
-from sksparse.cholmod import cholesky_AAt
+from sksparse.cholmod import cholesky
 import math
 
 import numpy as np
@@ -39,11 +38,9 @@ class CliqueComponent:
         # Generate matrix: L = rho_i*Pt*P (static if rho kept constant)
         self.L = self.rho * self.P.transpose() * self.P                      
         # Generate matrix: R = rho * I + sigma * A * At (static if rho and sigma kept constant), and its inverse
-        # TODO: Use choleskyAAt
         self.R = csc_matrix(self.rho * identity(len(self.s)) + self.sigma * self.At.transpose() * self.At)
-        # self.Rinv = scipy.sparse.linalg.inv(self.R)  # To be removed, since will be solved with cholesky
-        # Replace inverse computation with cholesky factorisation (lower triangular matrix)
-        self.R_chol, self.low = cho_factor(self.R.todense())
+        # Cholesky factorisation for most efficient system of equations solution
+        self.KKt = cholesky(self.R, 0)
 
         self.yUpdateVector = self.P.transpose() * (self.zeta + self.rho * self.s)    # Initialise first y updating value
 
@@ -60,10 +57,9 @@ class CliqueComponent:
         self.L = self.rho * self.P.transpose() * self.P    # Update L (if rho is programmed to be dynamic)
 
     # Update R matrix and corresponding inverse (in use only when rho and/or sigma is dynamic)
-    # TODO: This should eventually be changed to use KKT prefactorisation
     def updateRMatrix(self):
         self.R = csc_matrix(self.rho * identity(len(self.s)) + self.sigma * self.At.transpose() * self.At)
-        self.Rinv = scipy.sparse.linalg.inv(self.R)
+        self.KKt = cholesky(self.R, 0)
 
 
 # Helper function to vectorise a matrix, taking in a sparse matrix

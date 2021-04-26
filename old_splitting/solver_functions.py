@@ -1,7 +1,7 @@
 import scipy
 import math
 from scipy.sparse import csc_matrix, kron, vstack, csr_matrix, lil_matrix
-from scipy.linalg import eigh, cho_solve
+from scipy.linalg import eigh
 import numpy as np
 from operator import itemgetter
 
@@ -208,7 +208,7 @@ def updateSVector(cliqueComponents, y):
         # Calculate column vector on righthand of equation
         rightHandSide = cl.rho * cl.P * y + ( cl.sigma * cl.At.transpose() ) * (cl.c - cl.z + 1/cl.sigma * cl.eta) - cl.zeta + (1-cl.lamb) * cl.b
         # Update s vector by solving the prefactored cholesky matrix
-        cl.s = cho_solve((cl.R_chol, cl.low), rightHandSide)
+        cl.s = cl.KKt.solve_A(rightHandSide)
 
 
 # Lagrange multiplier update, computationally simple task (+ update primary residual for each clique)
