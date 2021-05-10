@@ -117,10 +117,17 @@ class CPUTime:
     def __init__(self, start=0):
         self.start = start
         self.init = 0.0
+        self.cliqueDetection = 0.0
         self.elapsed = 0.0
-        self.updateX = 0.0
+
         self.updateY = 0.0
         self.updateZ = 0.0
+        self.updateS = 0.0
+
+        self.updateLagrangeMultipliers = 0.0
+        self.updateResiduals = 0.0
+
+        self.calculateCost = 0.0
 
 
 # Helper function to vectorise a matrix, taking in a sparse matrix

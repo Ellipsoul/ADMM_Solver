@@ -21,13 +21,11 @@ c = mat_contents['c']        # c
 K = mat_contents['K'][0,0]   # Class object with attributes f, l, q and s
 
 # Call the solver
-t1 = time.process_time()
 solution = admmCliqueSplitting(At, b, c, K)
-t2 = time.process_time() - t1
-print(t2)
-# print("Update Y, time: ", solution.time.updateY)
-# print("Update Z, time: ", solution.time.updateZ)
-# print("Update X, time: ", solution.time.updateX)
-
-
-print(solution.y)
+print("|  Update Global Y Vector,      time: ", solution.time.updateY)
+print("|  Update Z Projection,         time: ", solution.time.updateZ)
+print("|  Update Local S Vectors,      time: ", solution.time.updateS)
+print("|  Update Lagrange Multipliers, time: ", solution.time.updateLagrangeMultipliers)
+print("|  Update Residual,             time: ", solution.time.updateResiduals)
+print("|  Calculate Objective Cost,    time: ", solution.time.calculateCost)
+print("|================================================================|")
