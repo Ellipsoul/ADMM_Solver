@@ -22,12 +22,12 @@ class SolutionStructure:
         self.options = options                                       # Options
         self.cliqueComponents = detectCliques(At, b, c, K, options)  # Detect the cliques!
 
-        self.time = CPUTime()        # Tracking time for algorithm
+        self.time = CPUTime()                 # Tracking time for algorithm
 
-        self.objectiveCost = None    # Initialise cost (will be updated at each iteration)
-        self.primaryResidual = None  # Initialise primal residual
-        self.dualResidual = None     # Initialise dual residual
-        self.y = None                # Initialise solution variable
+        self.objectiveCost = None             # Initialise cost (will be updated at each iteration)
+        self.iterationPrimalResidual = float("inf")   # Initialise iteration max primal residual
+        self.iterationDualResidual = float("inf")     # Initialise iteration max dual residual
+        self.y = None                         # Initialise solution variable
 
         # Gather lefthand matrix inverse (for y minimisation step)
         lefthandMatrixSum = sum(clique.L for clique in self.cliqueComponents)  # Sum lefthand diagonal matrix
@@ -73,9 +73,18 @@ class CliqueComponent:
 
         self.yUpdateVector = self.P.transpose() * (self.zeta + self.rho * self.s)    # Initialise first y updating value
 
-        # Initialise initial primary and dual residuals  TODO: Fix this!
-        self.primaryResidual = np.linalg.norm(self.c - self.At*self.s - self.z)
-        self.dualResidual = float("inf")
+        # Initialise initial primal and dual residuals
+
+        # Local primal residual (c - At*s - z)
+        # The other residual (s - P*y) will be calculated globally since it requires access to the global y vector
+        self.primalResidualLocal = np.linalg.norm(self.c - self.At*self.s - self.z)
+        # First Dual Residual: -lambda * b - sum(Pt * zeta^k+1) = rho * Pt * (s^k - s^k+1)  
+        # Must be summed across all cliques 
+        self.dualResidualOne = float("inf")
+        # Second Dual Residual: sigma * At (s^k+1 - s^k)
+        # This one is local, so there is one for each clique
+        self.dualResidualTwo = float("inf")
+
 
     # Generate righthand local value for minimising with respect to y
     def updateYUpdateVector(self):
@@ -93,7 +102,7 @@ class CliqueComponent:
 
 # Class of options
 class Options:
-    def __init__(self, rho=10, sigma=10, lamb=0.5, relTol=1.0e-04, maxIter=1000, dispIter=100):
+    def __init__(self, rho=10, sigma=10, lamb=0.5, relTol=1.0e-06, maxIter=1000, dispIter=100):
         self.rho = rho                      # Penalty parameter 1
         self.sigma = sigma                  # Penalty parameter 2
         self.lamb = lamb                    # Weighting between large vector optimisation and clique optimisation

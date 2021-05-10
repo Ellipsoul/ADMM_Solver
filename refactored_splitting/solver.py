@@ -24,24 +24,26 @@ def admmCliqueSplitting(At, b, c, K):
 
     printHeader()
 
+    t1 = time.process_time()
     # Start of ADMM Iterations
-    for i in range(options.maxIter):
-    
+    for i in range(options.maxIter):    
         # Print iteration if required
         # if i%options.dispIter==0 or i+1==options.maxIter:
         #     displayIteration(i, sol)
 
         # Check if stopping criterion has been satisfied
-        # if sol.primaryResidual < options.relTol and sol.dualResidual < options.relTol: break
+        if sol.iterationPrimalResidual < options.relTol and sol.iterationDualResidual < options.relTol: break
 
-        # Update variables
-        updateYVector(sol)
-        updateZProjection(sol)
-        updateSVector(sol)
-        updateLagrangeMultipliers(sol)
+        # Carry out iteration steps
+        updateYVector(sol)                          # Y vector minimisation step
+        updateZProjection(sol)                      # z Conic Projection step
+        updateSVector(sol)                          # s local vectors minimisation step
+        updateLagrangeMultipliers(sol)              # Lagrange Multiplier update step
+        gatherIterationResiduals(sol)               # Parse and calculate updated residuals
 
-        sol.objectiveCost = -b.transpose() * sol.y
-
+        sol.objectiveCost = -b.transpose() * sol.y  # Update objective function cost
+    t2 = time.process_time() - t1
+    print(t2)
 
     # Wrap up main function
     # displayIteration(i, sol)   # Final Iteration
@@ -73,11 +75,7 @@ def updateYVector(sol):
 def updateZProjection(sol):
     for clique in sol.cliqueComponents:  # Iterate through all cliques
         vectorToProject = clique.c - clique.At * clique.s + 1/clique.sigma * clique.eta  # Vector for conic projection
-        zNew = projectCones(vectorToProject, clique.K)                                   # Generate updated z vector
-        # TODO: NOT THE RIGHT DRES
-        # n Cliques => n + 1 dual residuals, 2n + 1 primals
-        clique.dualResidual = np.linalg.norm(clique.At.transpose() * (clique.z - zNew))  # Update local residual
-        clique.z = zNew                                                                  # Pass updated z vector   
+        clique.z = projectCones(vectorToProject, clique.K)                               # Generate updated z vector   
 
 
 # Helper for conic projection of full vector
@@ -85,7 +83,7 @@ def projectCones(vector, K):
     projectZeroCone(vector[:K['f'], ])                     # Pass zero cone portion to helper
     projectNNOrthantCone(vector[K['f']:K['f']+K['l'], ])   # Pass NN Orthant portion to helper
     ptr = K['f']+K['l']
-    for PSDSize in K['s']:
+    for PSDSize in K['s']: 
         ptr2 = ptr + PSDSize ** 2
         vector[ptr:ptr2] = projectPSDCone(vector[ptr:ptr2])
         ptr = ptr2
@@ -122,25 +120,47 @@ def updateSVector(sol):
     for cl in sol.cliqueComponents:
         # Calculate column vector on righthand of equation
         rightHandSide = cl.rho * cl.P * sol.y + ( cl.sigma * cl.At.transpose() ) * (cl.c - cl.z + 1/cl.sigma * cl.eta) - cl.zeta + (1-cl.lamb) * cl.b
-        # Update s vector by solving the prefactored cholesky matrix
-        cl.s = cl.KKt.solve_A(rightHandSide)
+
+        oldS = cl.s                           # Temporarily store s vector of previous iteration 
+        cl.s = cl.KKt.solve_A(rightHandSide)  # Update s vector by solving the prefactored cholesky matrix
+
+        # Update first dual residual (Just locally first, needs to be summed across cliques to produce full residual)
+        cl.dualResidualOne = cl.rho * cl.P.transpose() * (oldS - cl.s)
+        # Update second residual (This is a local residual, and there will be one per clique)
+        cl.dualResidualTwo = cl.sigma * cl.At * (cl.s - oldS)
 
 
-# Lagrange multiplier update, computationally simple task (+ update primary residual for each clique)
+# Lagrange multiplier update, computationally simple task (+ update local primal residual for each clique)
 def updateLagrangeMultipliers(sol):
      for clique in sol.cliqueComponents:
         clique.eta += clique.sigma * (clique.c - clique.At*clique.s - clique.z)              # Update eta
         clique.zeta += clique.rho * (clique.s - clique.P * sol.y)                            # Update zeta
-        # TODO: NOT THE RIGHT PRES
-        clique.primaryResidual = np.linalg.norm(clique.At * clique.s + clique.z - clique.c)  # Update primary residual
 
+        # Update local primal residual
+        clique.primalResidualLocal = np.linalg.norm(clique.c - clique.At * clique.s - clique.z)  
+
+
+# Update the maximum primal and dual residual at this iteration
+def gatherIterationResiduals(sol):
+    cliques = sol.cliqueComponents
+
+    primalResidualOne = max(c.primalResidualLocal for c in cliques)               # Max of local primal residuals
+    primalResidualTwo = max(np.linalg.norm(c.s - c.P * sol.y) for c in cliques)   # Max of global primal residuals
+    sol.iterationPrimalResidual = max(primalResidualOne, primalResidualTwo)
+
+    dualResidualOne = np.linalg.norm(sum(c.dualResidualOne for c in cliques))     # Single first dual residual
+    dualResidualTwoMax = max(np.linalg.norm(c.dualResidualTwo) for c in cliques)  # Max of all second dual residuals
+    sol.iterationDualResidual = max(dualResidualOne, dualResidualTwoMax)
+
+    # print("Primal", sol.iterationPrimalResidual)
+    # print("Dual", sol.iterationDualResidual, '\n')
 
 
 # Display current iteration information
 def displayIteration(i, sol):
     sol.time.elapsed = time.process_time() - sol.time.start
     str = "|  {:4}  |  {:9.2e}  |  {:9.2e}  |  {:9.2e}  |  {:9.2e}  |"
-    print(str.format(i, sol.objectiveCost, sol.primaryResidual, sol.dualResidual, sol.time.elapsed))
+    print(str.format(i, sol.objectiveCost, sol.iterationPrimalResidual, sol.iteraionDualResidual, sol.time.elapsed))
     
 
 # Prints the header for solver
