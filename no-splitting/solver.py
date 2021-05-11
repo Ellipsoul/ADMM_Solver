@@ -14,7 +14,7 @@ import time
 # Update Y (solve system)
 def updateY(sol, At, b, c, K, options):
     t0 = time.process_time()
-    rhs = At.transpose() * ( c - sol.z - sol.x/options.rho  ) + b/options.rho
+    rhs = sol.A * ( c - sol.z - sol.x/options.rho  ) + b/options.rho
     # sol.y = scipy.sparse.linalg.spsolve(H,rhs) # this is extremely ugly: should factorize beforehand!
     sol.y = sol.KKT.solve_A(rhs)
     sol.y = sol.y.reshape(sol.y.shape[0],1) # this is very ugly!
@@ -30,7 +30,7 @@ def updateZ(sol, At, b, c, K, options):
     vectorToProject = c - At*sol.y - sol.x/options.rho
     zNew = projectCones(vectorToProject, K)
     sol.time.updateZ += time.process_time() - t0
-    sol.dres = np.linalg.norm( At.transpose() * (sol.z-zNew) ) * options.rho
+    sol.dres = np.linalg.norm( sol.A * (sol.z-zNew) ) * options.rho
     sol.z = zNew
 
 
@@ -138,7 +138,7 @@ def admmSolverNoSplitting(At, b, c, K):
         updateY(sol, At, b, c, K, options)
         updateZ(sol, At, b, c, K, options)
         updateX(sol, At, b, c, K, options)
-        sol.cost = -b.transpose() * sol.y
+        sol.cost = -sol.bt * sol.y
 
 
     # Terminate main function

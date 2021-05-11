@@ -10,6 +10,8 @@ from sksparse.cholmod import cholesky_AAt
 # Class to store solution variables
 class solStructure:
     def __init__(self, At, b, c, K, options):
+        self.A = At.transpose()
+        self.bt = b.transpose()
 
         # x: lagrange multipliers
         self.x = np.zeros(shape=(c.shape[0], 1))
@@ -28,13 +30,13 @@ class solStructure:
         self.dres = float('inf')
 
         # Cost
-        self.cost = b.transpose() * self.y
+        self.cost = self.bt * self.y
 
         # Time
         self.time = CPUTime()
 
         # Factorization of system matrix
-        self.KKT = cholesky_AAt( At.transpose(), 0.0 )
+        self.KKT = cholesky_AAt( self.A, 0.0 )
 
 
 ################################################################################

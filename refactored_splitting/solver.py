@@ -27,7 +27,7 @@ def admmCliqueSplitting(At, b, c, K):
     # Start of ADMM Iterations
     for i in range(options.maxIter):    
         # Print iteration if required
-        if i%options.dispIter==1 or i+1==options.maxIter:
+        if i%options.dispIter==0 or i==options.maxIter:
             displayIteration(i, sol)
 
         # Check if stopping criterion has been satisfied
@@ -41,7 +41,7 @@ def admmCliqueSplitting(At, b, c, K):
         gatherIterationResiduals(sol)                       # Parse and calculate updated residuals
 
         t0 = time.process_time()
-        sol.objectiveCost = (-b.transpose() * sol.y)[0,0]   # Update objective function cost
+        sol.objectiveCost = (-sol.bt * sol.y)[0,0]   # Update objective function cost
         sol.time.calculateCost += time.process_time() - t0  # Time the step
 
     # Wrap up main function
@@ -65,7 +65,7 @@ def updateYVector(sol):
 
     for clique in sol.cliqueComponents:       # Iterating through each clique (can be parallelised)
         clique.updateYUpdateVector()          # Update righthand side of linear system
-        clique.updateLMatrix()                # Update lefthand side of linear system (if required)
+        # clique.updateLMatrix()              # Update lefthand side of linear system (if required)
 
     # Sum righthand vector
     righthandVectorSum = sum(clique.yUpdateVector for clique in sol.cliqueComponents) + sol.options.lamb * sol.b
@@ -129,13 +129,13 @@ def updateSVector(sol):
     # Iterate through all cliques (can be performed in parallel)
     for cl in sol.cliqueComponents:
         # Calculate column vector on righthand of equation
-        rightHandSide = cl.rho * cl.P * sol.y + ( cl.sigma * cl.At.transpose() ) * (cl.c - cl.z + 1/cl.sigma * cl.eta) - cl.zeta + (1-cl.lamb) * cl.b
+        rightHandSide = cl.rho * cl.P * sol.y + ( cl.sigma * cl.A ) * (cl.c - cl.z + 1/cl.sigma * cl.eta) - cl.zeta + (1-cl.lamb) * cl.b
 
         oldS = cl.s                           # Temporarily store s vector of previous iteration 
         cl.s = cl.KKt.solve_A(rightHandSide)  # Update s vector by solving the prefactored cholesky matrix
 
         # Update first dual residual (Just locally first, needs to be summed across cliques to produce full residual)
-        cl.dualResidualOne = cl.rho * cl.P.transpose() * (oldS - cl.s)
+        cl.dualResidualOne = cl.rho * cl.Pt * (oldS - cl.s)
         # Update second residual (This is a local residual, and there will be one per clique)
         cl.dualResidualTwo = cl.sigma * cl.At * (cl.s - oldS)
     
@@ -177,7 +177,8 @@ def gatherIterationResiduals(sol):
 def displayIteration(i, sol):
     sol.time.elapsed = time.process_time() - sol.time.start
     str = "|  {:4}  |  {:9.2e}  |  {:9.2e}  |  {:9.2e}  |  {:9.2e}  |"
-    print(str.format(i, sol.objectiveCost, sol.iterationPrimalResidual, sol.iterationDualResidual, sol.time.elapsed))
+    cost = sol.objectiveCost if sol.objectiveCost else float('inf')
+    print(str.format(i, cost, sol.iterationPrimalResidual, sol.iterationDualResidual, sol.time.elapsed))
     
 
 # Prints the header for solver

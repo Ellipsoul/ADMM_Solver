@@ -16,18 +16,19 @@ class SolutionStructure:
         # Original statement components
         self.At = At
         self.b = b
+        self.bt = self.b.transpose()
         self.c = c
         self.K = K
 
         self.options = options                                       # Options
         self.cliqueComponents = detectCliques(At, b, c, K, options)  # Detect the cliques!
 
-        self.time = CPUTime()                 # Tracking time for algorithm
+        self.time = CPUTime()                          # Tracking time for algorithm
 
-        self.objectiveCost = None             # Initialise cost (will be updated at each iteration)
-        self.iterationPrimalResidual = float("inf")   # Initialise iteration max primal residual
-        self.iterationDualResidual = float("inf")     # Initialise iteration max dual residual
-        self.y = None                         # Initialise solution variable
+        self.objectiveCost = None                      # Initialise cost (will be updated at each iteration)
+        self.iterationPrimalResidual = float("inf")    # Initialise iteration max primal residual
+        self.iterationDualResidual = float("inf")      # Initialise iteration max dual residual
+        self.y = None                                  # Initialise solution variable
 
         # Gather lefthand matrix inverse (for y minimisation step)
         lefthandMatrixSum = sum(clique.L for clique in self.cliqueComponents)  # Sum lefthand diagonal matrix
@@ -41,10 +42,12 @@ class CliqueComponent:
     def __init__(self, At, b, c, K, P, options):
         # Problem statement components
         self.At = At
+        self.A = self.At.transpose()   # Store the transpose since transposing is expensive
         self.b = b
         self.c = c
         self.K = K
         self.P = P
+        self.Pt = self.P.transpose()   # Store the transpose since transposing is expensive
         
         # Useful constants
         self.rho = options.rho
@@ -67,7 +70,7 @@ class CliqueComponent:
         # Generate matrix: L = rho_i*Pt*P (static if rho kept constant)
         self.L = self.rho * self.P.transpose() * self.P                      
         # Generate matrix: R = rho * I + sigma * A * At (static if rho and sigma kept constant), and its inverse
-        self.R = csc_matrix(self.rho * identity(len(self.s)) + self.sigma * self.At.transpose() * self.At)
+        self.R = csc_matrix(self.rho * identity(len(self.s)) + self.sigma * self.A * self.At)
         # Cholesky factorisation for most efficient system of equations solution
         self.KKt = cholesky(self.R, 0)
 
@@ -88,21 +91,21 @@ class CliqueComponent:
 
     # Generate righthand local value for minimising with respect to y
     def updateYUpdateVector(self):
-        self.yUpdateVector = self.P.transpose() * (self.zeta + self.rho * self.s)
+        self.yUpdateVector = self.Pt * (self.zeta + self.rho * self.s)
 
     # Update L diagonal matrix (if code needs to be extended to vary rho)
     def updateLMatrix(self):
-        self.L = self.rho * self.P.transpose() * self.P    # Update L (if rho is programmed to be dynamic)
+        self.L = self.rho * self.Pt * self.P    # Update L (if rho is programmed to be dynamic)
 
     # Update R matrix and corresponding inverse (in use only when rho and/or sigma is dynamic)
     def updateRMatrix(self):
-        self.R = csc_matrix(self.rho * identity(len(self.s)) + self.sigma * self.At.transpose() * self.At)
+        self.R = csc_matrix(self.rho * identity(len(self.s)) + self.sigma * self.A * self.At)
         self.KKt = cholesky(self.R, 0)
 
 
 # Class of options
 class Options:
-    def __init__(self, rho=10, sigma=10, lamb=0.5, relTol=1.0e-06, maxIter=1000, dispIter=100):
+    def __init__(self, rho=10, sigma=10, lamb=0.5, relTol=1.0e-06, maxIter=1000, dispIter=50):
         self.rho = rho                      # Penalty parameter 1
         self.sigma = sigma                  # Penalty parameter 2
         self.lamb = lamb                    # Weighting between large vector optimisation and clique optimisation
