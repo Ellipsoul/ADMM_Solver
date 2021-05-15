@@ -36,7 +36,7 @@ class solStructure:
         self.time = CPUTime()
 
         # Factorization of system matrix
-        self.KKT = cholesky_AAt( self.A, 0.0 )
+        self.KKT = cholesky_AAt( csc_matrix(self.A), 0.0 )
 
 
 ################################################################################

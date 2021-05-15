@@ -132,6 +132,8 @@ class CPUTime:
 
         self.calculateCost = 0.0
 
+        self.temp = 0.0  # Use this to test time specific parts of the solver
+
 
 # Helper function to vectorise a matrix, taking in a sparse matrix
 def vectoriseMatrix(M):

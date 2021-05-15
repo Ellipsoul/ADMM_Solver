@@ -129,8 +129,8 @@ def updateSVector(sol):
     # Iterate through all cliques (can be performed in parallel)
     for cl in sol.cliqueComponents:
         # Calculate column vector on righthand of equation
-        rightHandSide = cl.rho * cl.P * sol.y + ( cl.sigma * cl.A ) * (cl.c - cl.z + 1/cl.sigma * cl.eta) - cl.zeta + (1-cl.lamb) * cl.b
-
+        # This long matrix operation is actually quite slow. Maybe there is a way to speed it up?
+        rightHandSide = cl.rho * csr_matrix(cl.P) * sol.y + cl.sigma * cl.A * (cl.c - cl.z + 1/cl.sigma * cl.eta) - cl.zeta + (1-cl.lamb) * cl.b
         oldS = cl.s                           # Temporarily store s vector of previous iteration 
         cl.s = cl.KKt.solve_A(rightHandSide)  # Update s vector by solving the prefactored cholesky matrix
 
