@@ -4,7 +4,6 @@ from scipy.sparse import csc_matrix, kron, vstack, csr_matrix, lil_matrix
 from scipy.linalg import eigh
 import numpy as np
 from operator import itemgetter
-import time
 import timeit
 
 import networkx as nx
@@ -15,13 +14,13 @@ from helpers import ( vectoriseMatrix, matriciseVector, SolutionStructure, Cliqu
 
 # Main ADMM Solver with Clique Splitting
 def admmCliqueSplitting(At, b, c, K):
-    tStart = time.process_time()  # Start the clock
-    options = Options()           # Initialise default options
+    tStart = timeit.default_timer()  # Start the clock
+    options = Options()              # Initialise default options
 
     # Initialise solution structure and set startup time
     sol = SolutionStructure(At, b, c, K, options)
     sol.time.start = tStart
-    sol.time.cliqueDetection = time.process_time() - sol.time.start
+    sol.time.cliqueDetection = timeit.default_timer() - sol.time.start
 
     printHeader()
 
@@ -41,9 +40,9 @@ def admmCliqueSplitting(At, b, c, K):
         updateLagrangeMultipliers(sol)                      # Lagrange Multiplier update step
         gatherIterationResiduals(sol)                       # Parse and calculate updated residuals
 
-        t0 = time.process_time()
+        t0 = timeit.default_timer()
         sol.objectiveCost = (-sol.bt * sol.y)[0,0]   # Update objective function cost
-        sol.time.calculateCost += time.process_time() - t0  # Time the step
+        sol.time.calculateCost += timeit.default_timer() - t0  # Time the step
 
     # Wrap up main function
     displayIteration(i, sol)   # Final Iteration
@@ -62,7 +61,7 @@ def admmCliqueSplitting(At, b, c, K):
 
 # Y vector minimisation step
 def updateYVector(sol):
-    t0 = time.process_time()                  # Start the clock
+    t0 = timeit.default_timer()               # Start the clock
 
     for clique in sol.cliqueComponents:       # Iterating through each clique (can be parallelised)
         clique.updateYUpdateVector()          # Update righthand side of linear system
@@ -73,12 +72,12 @@ def updateYVector(sol):
 
     sol.y = sol.Linv * righthandVectorSum  # Update y vector (Might be a better way to do this)
 
-    sol.time.updateY += time.process_time() - t0  # Time the step
+    sol.time.updateY += timeit.default_timer() - t0  # Time the step
 
 
 # z vector conic projection step
 def updateZProjection(sol):
-    t0 = time.process_time()  # Start the clock
+    t0 = timeit.default_timer()  # Start the clock
 
     # Parallel(n_jobs=-1, backend='threading')(delayed(updateZWrapper)(c) for c in sol.cliqueComponents)
 
@@ -86,7 +85,7 @@ def updateZProjection(sol):
         vectorToProject = clique.c - (clique.At * clique.s) + 1/clique.sigma * clique.eta  # Vector for conic projection
         clique.z = projectCones(vectorToProject, clique.K)                                 # Generate updated z vector 
 
-    sol.time.updateZ += time.process_time() - t0  # Time the step  
+    sol.time.updateZ += timeit.default_timer() - t0  # Time the step  
 
 def updateZWrapper(clique):
     vectorToProject = clique.c - clique.At * clique.s + 1/clique.sigma * clique.eta  # Vector for conic projection
@@ -130,7 +129,7 @@ def projectPSDCone(vector):
 
 # s vector update (currently using static inverse matrix)
 def updateSVector(sol):
-    t0 = time.process_time()  # Start the clock
+    t0 = timeit.default_timer()  # Start the clock
 
     # Iterate through all cliques (can be performed in parallel)
     for cl in sol.cliqueComponents:
@@ -145,12 +144,12 @@ def updateSVector(sol):
         # Update second residual (This is a local residual, and there will be one per clique)
         cl.dualResidualTwo = cl.sigma * (cl.At * (cl.s - oldS))
     
-    sol.time.updateS += time.process_time() - t0  # Time the step
+    sol.time.updateS += timeit.default_timer() - t0  # Time the step
 
 
 # Lagrange multiplier update, computationally simple task (+ update local primal residual for each clique)
 def updateLagrangeMultipliers(sol):
-    t0 = time.process_time()  # Start the clock
+    t0 = timeit.default_timer()  # Start the clock
 
     for clique in sol.cliqueComponents:
         clique.eta += clique.sigma * (clique.c - clique.At*clique.s - clique.z)              # Update eta
@@ -159,12 +158,12 @@ def updateLagrangeMultipliers(sol):
         # Update local primal residual
         clique.primalResidualLocal = np.linalg.norm(clique.c - clique.At * clique.s - clique.z)
       
-    sol.time.updateLagrangeMultipliers += time.process_time() - t0  # Time the step
+    sol.time.updateLagrangeMultipliers += timeit.default_timer() - t0  # Time the step
 
 
 # Update the maximum primal and dual residual at this iteration
 def gatherIterationResiduals(sol):
-    t0 = time.process_time()  # Start the clock
+    t0 = timeit.default_timer()  # Start the clock
 
     cliques = sol.cliqueComponents
 
@@ -176,14 +175,12 @@ def gatherIterationResiduals(sol):
     dualResidualTwoMax = max(np.linalg.norm(c.dualResidualTwo) for c in cliques)  # Max of all second dual residuals
     sol.iterationDualResidual = max(dualResidualOne, dualResidualTwoMax)
 
-    sol.time.updateResiduals += time.process_time() - t0  # Time the step
+    sol.time.updateResiduals += timeit.default_timer() - t0  # Time the step
 
 
 # Display current iteration information
 def displayIteration(i, sol):
-    sol.time.elapsed = time.process_time() - sol.time.start
-    print(timeit.default_timer())
-    print("")
+    sol.time.elapsed = timeit.default_timer() - sol.time.start
     str = "|  {:4}  |  {:9.2e}  |  {:9.2e}  |  {:9.2e}  |  {:9.2e}  |"
     cost = sol.objectiveCost if sol.objectiveCost else float('inf')
     print(str.format(i, cost, sol.iterationPrimalResidual, sol.iterationDualResidual, sol.time.elapsed))

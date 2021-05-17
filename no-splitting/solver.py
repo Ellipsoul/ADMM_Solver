@@ -7,18 +7,18 @@ from operator import itemgetter
 import matplotlib.pylab as plt
 from helpers import vectoriseMatrix, matriciseVector, checkInputs
 from helpers import solStructure, Options, CPUTime
-import time
+import timeit
 #import sksparse.cholmod
 
 ###############################################################################
 # Update Y (solve system)
 def updateY(sol, At, b, c, K, options):
-    t0 = time.process_time()
+    t0 = timeit.default_timer()
     rhs = sol.A * ( c - sol.z - sol.x/options.rho  ) + b/options.rho
     # sol.y = scipy.sparse.linalg.spsolve(H,rhs) # this is extremely ugly: should factorize beforehand!
     sol.y = sol.KKT.solve_A(rhs)
     sol.y = sol.y.reshape(sol.y.shape[0],1) # this is very ugly!
-    sol.time.updateY += time.process_time() - t0
+    sol.time.updateY += timeit.default_timer() - t0
 
 
 ###############################################################################
@@ -26,10 +26,10 @@ def updateY(sol, At, b, c, K, options):
 # Also update the dual residual, since we need the old and new z variables for this
 # We do not time the residual update
 def updateZ(sol, At, b, c, K, options):
-    t0 = time.process_time()
+    t0 = timeit.default_timer()
     vectorToProject = c - At*sol.y - sol.x/options.rho
     zNew = projectCones(vectorToProject, K)
-    sol.time.updateZ += time.process_time() - t0
+    sol.time.updateZ += timeit.default_timer() - t0
     sol.dres = np.linalg.norm( sol.A * (sol.z-zNew) ) * options.rho
     sol.z = zNew
 
@@ -71,10 +71,10 @@ def projectPSDCone(vector):
 # Also update primal residual to minimize number of operations
 # We do not time the residual update
 def updateX(sol, At, b, c, K, options):
-    t0 = time.process_time()
+    t0 = timeit.default_timer()
     pres = At*sol.y + sol.z - c
     sol.x += options.rho * pres
-    sol.time.updateX += time.process_time() - t0
+    sol.time.updateX += timeit.default_timer() - t0
     sol.pres = np.linalg.norm(pres)
 
 
@@ -82,7 +82,7 @@ def updateX(sol, At, b, c, K, options):
 ###############################################################################
 # Display current iteration
 def displayIteration(i, sol):
-    sol.time.elapsed = time.process_time() - sol.time.start
+    sol.time.elapsed = timeit.default_timer() - sol.time.start
     str = "|  {:4}  |  {:9.2e}  |  {:9.2e}  |  {:9.2e}  |  {:9.2e}  |"
     print(str.format(i, sol.cost[0,0], sol.pres, sol.dres, sol.time.elapsed))
 
@@ -103,7 +103,7 @@ def admmSolverNoSplitting(At, b, c, K):
     """
 
     # Start the clock
-    t = time.process_time()
+    t = timeit.default_timer()
 
     # Verify inputs
     checkInputs(At, b, c, K)
@@ -112,7 +112,7 @@ def admmSolverNoSplitting(At, b, c, K):
     # Initialise solution structure and set startup time
     sol = solStructure(At, b, c, K, options)
     sol.time.start = t
-    sol.time.setup = time.process_time() - sol.time.start
+    sol.time.setup = timeit.default_timer() - sol.time.start
 
     # Print header
     print("==================================================================")
