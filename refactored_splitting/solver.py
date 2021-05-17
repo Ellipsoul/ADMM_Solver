@@ -5,6 +5,7 @@ from scipy.linalg import eigh
 import numpy as np
 from operator import itemgetter
 import time
+import timeit
 
 import networkx as nx
 import matplotlib.pylab as plt
@@ -14,12 +15,12 @@ from helpers import ( vectoriseMatrix, matriciseVector, SolutionStructure, Cliqu
 
 # Main ADMM Solver with Clique Splitting
 def admmCliqueSplitting(At, b, c, K):
-    t = time.process_time()  # Start the clock
-    options = Options()      # Initialise default options
+    tStart = time.process_time()  # Start the clock
+    options = Options()           # Initialise default options
 
     # Initialise solution structure and set startup time
     sol = SolutionStructure(At, b, c, K, options)
-    sol.time.start = t
+    sol.time.start = tStart
     sol.time.cliqueDetection = time.process_time() - sol.time.start
 
     printHeader()
@@ -79,12 +80,17 @@ def updateYVector(sol):
 def updateZProjection(sol):
     t0 = time.process_time()  # Start the clock
 
+    # Parallel(n_jobs=-1, backend='threading')(delayed(updateZWrapper)(c) for c in sol.cliqueComponents)
+
     for clique in sol.cliqueComponents:  # Iterate through all cliques
-        vectorToProject = clique.c - clique.At * clique.s + 1/clique.sigma * clique.eta  # Vector for conic projection
-        clique.z = projectCones(vectorToProject, clique.K)                               # Generate updated z vector 
+        vectorToProject = clique.c - (clique.At * clique.s) + 1/clique.sigma * clique.eta  # Vector for conic projection
+        clique.z = projectCones(vectorToProject, clique.K)                                 # Generate updated z vector 
 
     sol.time.updateZ += time.process_time() - t0  # Time the step  
 
+def updateZWrapper(clique):
+    vectorToProject = clique.c - clique.At * clique.s + 1/clique.sigma * clique.eta  # Vector for conic projection
+    clique.z = projectCones(vectorToProject, clique.K)                               # Generate updated z vector 
 
 # Helper for conic projection of full vector
 def projectCones(vector, K):
@@ -130,14 +136,14 @@ def updateSVector(sol):
     for cl in sol.cliqueComponents:
         # Calculate column vector on righthand of equation
         # This long matrix operation is actually quite slow. Maybe there is a way to speed it up?
-        rightHandSide = cl.rho * csr_matrix(cl.P) * sol.y + cl.sigma * cl.A * (cl.c - cl.z + 1/cl.sigma * cl.eta) - cl.zeta + (1-cl.lamb) * cl.b
+        rightHandSide = cl.rho * (csr_matrix(cl.P) * sol.y) + cl.sigma * (cl.A * (cl.c - cl.z + 1/cl.sigma * cl.eta)) - cl.zeta + (1-cl.lamb) * cl.b
         oldS = cl.s                           # Temporarily store s vector of previous iteration 
         cl.s = cl.KKt.solve_A(rightHandSide)  # Update s vector by solving the prefactored cholesky matrix
 
         # Update first dual residual (Just locally first, needs to be summed across cliques to produce full residual)
-        cl.dualResidualOne = cl.rho * cl.Pt * (oldS - cl.s)
+        cl.dualResidualOne = cl.rho * (cl.Pt * (oldS - cl.s))
         # Update second residual (This is a local residual, and there will be one per clique)
-        cl.dualResidualTwo = cl.sigma * cl.At * (cl.s - oldS)
+        cl.dualResidualTwo = cl.sigma * (cl.At * (cl.s - oldS))
     
     sol.time.updateS += time.process_time() - t0  # Time the step
 
@@ -176,6 +182,8 @@ def gatherIterationResiduals(sol):
 # Display current iteration information
 def displayIteration(i, sol):
     sol.time.elapsed = time.process_time() - sol.time.start
+    print(timeit.default_timer())
+    print("")
     str = "|  {:4}  |  {:9.2e}  |  {:9.2e}  |  {:9.2e}  |  {:9.2e}  |"
     cost = sol.objectiveCost if sol.objectiveCost else float('inf')
     print(str.format(i, cost, sol.iterationPrimalResidual, sol.iterationDualResidual, sol.time.elapsed))
