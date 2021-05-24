@@ -54,7 +54,7 @@ class CPUTime:
 ################################################################################
 # Class of options
 class Options:
-    def __init__(self, rho=10, relTol=1.0e-06, maxIter=1000, dispIter=100):
+    def __init__(self, rho=10, relTol=1.0e-06, maxIter=10000, dispIter=100):
         self.rho = rho                      # Penalty parameter
         self.relTol = relTol                # Relative tolerance
         self.maxIter = maxIter              # Maximum number of iterations

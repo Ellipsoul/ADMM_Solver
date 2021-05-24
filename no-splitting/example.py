@@ -6,7 +6,7 @@ import numpy as np
 from solver import admmSolverNoSplitting
 
 # Read data from file
-mat_fname = './../pop_data.mat'
+mat_fname = './../popData/pop_data.mat'
 mat_contents = sio.loadmat(mat_fname, struct_as_record=False)
 
 # Data extraction
@@ -21,3 +21,4 @@ sol = admmSolverNoSplitting(At, b, c, K)
 print("Update Y, time: ", sol.time.updateY)
 print("Update Z, time: ", sol.time.updateZ)
 print("Update X, time: ", sol.time.updateX)
+print(sol.y)

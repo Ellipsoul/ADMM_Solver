@@ -1,6 +1,6 @@
 import sympy as sym
 import numpy as np
-from parserhelpers import compileParseMoment
+from parserhelpers_old import compileParseMoment
 
 # Define problem size and initialise symbolic variables
 SIZE = 3

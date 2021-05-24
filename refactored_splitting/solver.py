@@ -9,6 +9,8 @@ import timeit
 import networkx as nx
 import matplotlib.pylab as plt
 
+from joblib import Parallel, delayed
+
 from helpers import ( vectoriseMatrix, matriciseVector, SolutionStructure, CliqueComponent, Options, CPUTime )
 
 
@@ -20,7 +22,7 @@ def admmCliqueSplitting(At, b, c, K):
     # Initialise solution structure and set startup time
     sol = SolutionStructure(At, b, c, K, options)
     sol.time.start = tStart
-    sol.time.cliqueDetection = timeit.default_timer() - sol.time.start
+    sol.time.setupTime = timeit.default_timer() - sol.time.start
 
     printHeader()
 
@@ -47,13 +49,14 @@ def admmCliqueSplitting(At, b, c, K):
     # Wrap up main function
     displayIteration(i, sol)   # Final Iteration
     print("|----------------------------------------------------------------|")
-    print("|    CPU time (s) = {:9.2e}".format(sol.time.elapsed))
-    print("| Clique time (s) = {:9.2e}".format(sol.time.cliqueDetection))
-    print("|   ADMM time (s) = {:9.2e}".format(sol.time.elapsed-sol.time.cliqueDetection))
-    print("|      Iterations = {:6}".format(i))
-    print("|            Cost = {:6.4g}".format(sol.objectiveCost))
-    print("|      Primal res = {:9.2e}".format(sol.iterationPrimalResidual))
-    print("|        Dual res = {:9.2e}".format(sol.iterationDualResidual))
+    print("|     CPU time (s) = {:9.2e}".format(sol.time.elapsed))
+    print("|   Setup time (s) = {:9.2e}".format(sol.time.setupTime))
+    print("| nxGraph time (s) = {:9.2e}".format(sol.time.findCliques))
+    print("|    ADMM time (s) = {:9.2e}".format(sol.time.elapsed-sol.time.setupTime))
+    print("|       Iterations = {:6}".format(i))
+    print("|             Cost = {:6.4g}".format(sol.objectiveCost))
+    print("|       Primal res = {:9.2e}".format(sol.iterationPrimalResidual))
+    print("|         Dual res = {:9.2e}".format(sol.iterationDualResidual))
     print("|================================================================|")
 
     return sol
@@ -79,7 +82,7 @@ def updateYVector(sol):
 def updateZProjection(sol):
     t0 = timeit.default_timer()  # Start the clock
 
-    # Parallel(n_jobs=-1, backend='threading')(delayed(updateZWrapper)(c) for c in sol.cliqueComponents)
+    # Parallel(verbose=0, n_jobs=10)(delayed(updateZWrapper)(c) for c in sol.cliqueComponents)
 
     for clique in sol.cliqueComponents:  # Iterate through all cliques
         vectorToProject = clique.c - (clique.At * clique.s) + 1/clique.sigma * clique.eta  # Vector for conic projection
@@ -184,7 +187,6 @@ def displayIteration(i, sol):
     str = "|  {:4}  |  {:9.2e}  |  {:9.2e}  |  {:9.2e}  |  {:9.2e}  |"
     cost = sol.objectiveCost if sol.objectiveCost else float('inf')
     print(str.format(i, cost, sol.iterationPrimalResidual, sol.iterationDualResidual, sol.time.elapsed))
-    
 
 # Prints the header for solver
 def printHeader():

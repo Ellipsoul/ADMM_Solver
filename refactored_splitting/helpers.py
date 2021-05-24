@@ -4,7 +4,10 @@ from scipy.sparse.linalg import inv
 from sksparse.cholmod import cholesky
 import math
 
+import timeit
+
 import numpy as np
+import multiprocessing as mp
 import matplotlib.pylab as plt
 import networkx as nx
 
@@ -20,11 +23,11 @@ class SolutionStructure:
         self.c = c
         self.K = K
 
-        self.options = options                                       # Options
-        self.cliqueComponents = detectCliques(At, b, c, K, options)  # Detect the cliques!
-        self.ncliques = len(self.cliqueComponents)
-
         self.time = CPUTime()                          # Tracking time for algorithm
+
+        self.options = options                                       # Options
+        self.cliqueComponents, self.time.findCliques = detectCliques(At, b, c, K, options)  # Detect the cliques!
+        self.ncliques = len(self.cliqueComponents)
 
         self.objectiveCost = None                      # Initialise cost (will be updated at each iteration)
         self.iterationPrimalResidual = float("inf")    # Initialise iteration max primal residual
@@ -121,7 +124,7 @@ class CPUTime:
     def __init__(self, start=0):
         self.start = start
         self.init = 0.0
-        self.cliqueDetection = 0.0
+        self.setupTime = 0.0
         self.elapsed = 0.0
 
         self.updateY = 0.0
@@ -130,6 +133,8 @@ class CPUTime:
 
         self.updateLagrangeMultipliers = 0.0
         self.updateResiduals = 0.0
+
+        self.findCliques = 0.0
 
         self.calculateCost = 0.0
 
@@ -150,8 +155,7 @@ def matriciseVector(v):
 
 # Large function for detecting and splitting cliques
 def detectCliques(At, b, c, K, options):
-    
-    nConstraints = K.f + K.l + len(K.s)   # Helper to track number of constraints
+    nConstraints = int(K.f) + int(K.l) + int(len(K.s))   # Helper to track number of constraints
     nCols = At.shape[1]                   # Useful later for P matrix construction
 
     # Initialise array of constraint components
@@ -205,9 +209,18 @@ def detectCliques(At, b, c, K, options):
     # Find cliques
     S = AtCollapsed.transpose() * AtCollapsed              # Generate matrix of codependencies
     G = nx.Graph(S)                                        # Initialise NetworkX graph
-    cliques = list(nx.algorithms.find_cliques(G))          # Retrieve cliques
+    # G.remove_edges_from(nx.selfloop_edges(G))            # Remove self_loops from graph (for chordal_graph_cliques)
+    t1 = timeit.default_timer()
 
-    for i in range(len(cliques)): cliques[i] = np.sort(cliques[i])
+    cliques = list(nx.algorithms.find_cliques(G))          # Retrieve cliques (extremely expensive!)
+    
+    # Not in use right now! Slower than generic find_cliques
+    # cliques = list(nx.chordal_graph_cliques(G))          # Find cliques of chordal graph
+    # cliques = [list(x) for x in cliques]
+
+    nxTime = timeit.default_timer() - t1                   # Time the nx function
+
+    for i in range(len(cliques)): cliques[i] = np.sort(cliques[i])  # Order cliques
 
     # Gather the related At, b, c, K and P arrays for each detected clique
 
@@ -271,7 +284,7 @@ def detectCliques(At, b, c, K, options):
     for i in range(len(cliques)):
         cliqueComponents.append(CliqueComponent(At_sparse[i], b_sparse[i], c_sparse[i], K_sparse[i], P_sparse[i], options))
 
-    return cliqueComponents
+    return cliqueComponents, nxTime
 
 
 # Quick function to check input validity

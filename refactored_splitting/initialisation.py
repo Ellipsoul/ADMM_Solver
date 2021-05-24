@@ -9,7 +9,7 @@ from solver import admmCliqueSplitting
 import time
 
 # Read data from file
-mat_fname = './../pop_data.mat'
+mat_fname = './../popData/pop_data.mat'
 mat_contents = sio.loadmat(mat_fname, struct_as_record=False)
 
 # Data extraction
@@ -29,3 +29,4 @@ print("|  Update Residual,             time: ", solution.time.updateResiduals)
 print("|  Calculate Objective Cost,    time: ", solution.time.calculateCost)
 print("|  Number of Cliques in problem:      ", solution.ncliques)
 print("|================================================================|")
+print(solution.y)
