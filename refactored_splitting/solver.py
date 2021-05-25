@@ -29,7 +29,7 @@ def admmCliqueSplitting(At, b, c, K):
     # Start of ADMM Iterations
     for i in range(options.maxIter):    
         # Print iteration if required
-        if i%options.dispIter==0 or i==options.maxIter:
+        if i%options.dispIter==0 or i==options.maxIter or i==1:
             displayIteration(i, sol)
 
         # Check if stopping criterion has been satisfied

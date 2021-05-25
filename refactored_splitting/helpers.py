@@ -3,6 +3,8 @@ from scipy.sparse import csc_matrix, kron, vstack, csr_matrix, dia_matrix, ident
 from scipy.sparse.linalg import inv
 from sksparse.cholmod import cholesky
 import math
+import chompack as cp
+from cvxopt import spmatrix, amd
 
 import timeit
 
@@ -74,6 +76,8 @@ class CliqueComponent:
         # Generate matrix: L = rho_i*Pt*P (static if rho kept constant)
         self.L = self.rho * self.Pt * self.P                      
         # Generate matrix: R = rho * I + sigma * A * At (static if rho and sigma kept constant), and its inverse
+        print(self.At.shape)
+        print(self.s.shape)
         self.R = csc_matrix(self.rho * identity(len(self.s)) + self.sigma * (self.A * self.At))
         # Cholesky factorisation for most efficient system of equations solution
         self.KKt = cholesky(self.R, 0)
@@ -208,17 +212,38 @@ def detectCliques(At, b, c, K, options):
 
     # Find cliques
     S = AtCollapsed.transpose() * AtCollapsed              # Generate matrix of codependencies
-    G = nx.Graph(S)                                        # Initialise NetworkX graph
+    I, J = np.nonzero(S)
+    AA = spmatrix(1.0, I, J)
+    symb = cp.symbolic(AA, p=amd.order)
+
+    # NetworkX implementation (no longer in use)
+    G = nx.Graph(S)                                      # Initialise NetworkX graph
     # G.remove_edges_from(nx.selfloop_edges(G))            # Remove self_loops from graph (for chordal_graph_cliques)
+    
     t1 = timeit.default_timer()
 
+    # chompack implementation
+    # reOrderedCliques = symb.cliques()
+    # ip = np.array(list(symb.ip))
+    # for i in range(len(reOrderedCliques)):
+    #     reOrderedCliques[i] = np.array(reOrderedCliques[i])
+    # mappings = {ip[i]:i for i in range(len(ip))}
+    # cliques2 = [None for _ in reOrderedCliques]
+
+    # for i in range(len(reOrderedCliques)):
+    #     currentClique = reOrderedCliques[i]
+    #     # print(currentClique)
+    #     rearrangedClique = sorted([mappings[i] for i in currentClique])
+    #     cliques2[i] = rearrangedClique
+
+    # Exponential time implementation (no longer in use)
     cliques = list(nx.algorithms.find_cliques(G))          # Retrieve cliques (extremely expensive!)
     
-    # Not in use right now! Slower than generic find_cliques
+    # Polynomial (?) time implementation (no longer in use)
     # cliques = list(nx.chordal_graph_cliques(G))          # Find cliques of chordal graph
     # cliques = [list(x) for x in cliques]
 
-    nxTime = timeit.default_timer() - t1                   # Time the nx function
+    nxTime = timeit.default_timer() - t1                   # Time the function
 
     for i in range(len(cliques)): cliques[i] = np.sort(cliques[i])  # Order cliques
 
@@ -282,7 +307,9 @@ def detectCliques(At, b, c, K, options):
 
     cliqueComponents = []
     for i in range(len(cliques)):
-        cliqueComponents.append(CliqueComponent(At_sparse[i], b_sparse[i], c_sparse[i], K_sparse[i], P_sparse[i], options))
+        cliqueComponent = CliqueComponent(At_sparse[i], b_sparse[i], c_sparse[i], K_sparse[i], P_sparse[i], options)
+        print(cliqueComponent)
+        cliqueComponents.append(cliqueComponent)
 
     return cliqueComponents, nxTime
 
