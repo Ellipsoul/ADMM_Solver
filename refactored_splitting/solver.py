@@ -5,6 +5,7 @@ from scipy.linalg import eigh
 import numpy as np
 from operator import itemgetter
 import timeit
+import csv
 
 import networkx as nx
 import matplotlib.pylab as plt
@@ -15,12 +16,13 @@ from helpers import ( vectoriseMatrix, matriciseVector, SolutionStructure, Cliqu
 
 
 # Main ADMM Solver with Clique Splitting
-def admmCliqueSplitting(At, b, c, K):
+def admmCliqueSplitting(At, b, c, K, numEl, omega):
     tStart = timeit.default_timer()  # Start the clock
     options = Options()              # Initialise default options
 
     # Initialise solution structure and set startup time
     sol = SolutionStructure(At, b, c, K, options)
+    sol.data.numEl, sol.data.omega = numEl, omega
     sol.time.start = tStart
     sol.time.setupTime = timeit.default_timer() - sol.time.start
 
@@ -28,9 +30,10 @@ def admmCliqueSplitting(At, b, c, K):
 
     # Start of ADMM Iterations
     for i in range(options.maxIter):    
-        # Print iteration if required
-        if i%options.dispIter==0 or i==options.maxIter or i==1:
+        # Print iteration if required, and store the data
+        if (i%options.dispIter==0 or i==options.maxIter or i==1) and i != 0:
             displayIteration(i, sol)
+            appendIterationData(i, sol)
 
         # Check if stopping criterion has been satisfied
         if sol.iterationPrimalResidual < options.relTol and sol.iterationDualResidual < options.relTol: break
@@ -47,7 +50,9 @@ def admmCliqueSplitting(At, b, c, K):
         sol.time.calculateCost += timeit.default_timer() - t0  # Time the step
 
     # Wrap up main function
-    displayIteration(i, sol)   # Final Iteration
+    displayIteration(i, sol)   # Final Iteration display
+    appendFinalData(sol)       # Gather data to be exported as csv
+    exportDataToCSV(sol.data)  # Export csv data
     print("|----------------------------------------------------------------|")
     print("|     CPU time (s) = {:9.2e}".format(sol.time.elapsed))
     print("|   Setup time (s) = {:9.2e}".format(sol.time.setupTime))
@@ -61,6 +66,40 @@ def admmCliqueSplitting(At, b, c, K):
 
     return sol
 
+# Writing data to csv
+def exportDataToCSV(data):
+    # Iteration data into first file
+    filepath1 = f'../results/splitting/splitting_iterations_{data.numEl}_{data.omega}.csv'
+    with open(filepath1, mode='w') as csv_file1:
+        fieldnames1 = ['i', 'objective_cost', 'primal_residual', 'dual_residual', 'time']
+        writer = csv.DictWriter(csv_file1, fieldnames=fieldnames1)
+
+        writer.writeheader()
+        for i in range(len(data.iteration)):
+            writer.writerow({'i': data.iteration[i], 
+                            'objective_cost': data.objectiveCost[i], 
+                            'primal_residual': data.primalResidual[i],
+                            'dual_residual': data.dualResidual[i],
+                            'time': data.time[i]})
+    
+    # Meta data into another file
+    filepath2 = f'../results/splitting/splitting_meta_{data.numEl}_{data.omega}.csv'
+    with open(filepath2, mode='w') as csv_file2:
+        fieldnames2 = ['num_el', 'omega', 'rel_tol', 'problem_numrows', 'problem_numcols', 'n_cliques', 
+                        'avg_clique_numrows', 'avg_clique_numcols', 'total_time', 'setup_time', 'nx_time',
+                        'admm_time', 'update_y_time', 'update_z_time', 'update_lagrange_time',
+                        'update_residual_time', 'update_cost_time']
+        writer = csv.DictWriter(csv_file2, fieldnames=fieldnames2)
+        writer.writeheader()
+        writer.writerow({'num_el': data.numEl, 'omega': data.omega, 'rel_tol': data.relTol, 
+                            'problem_numrows': data.problemSize[0], 'problem_numcols': data.problemSize[1], 
+                            'n_cliques': data.nCliques, 'avg_clique_numrows': data.avgCliqueSize[0], 
+                            'avg_clique_numcols': data.avgCliqueSize[1], 'total_time': data.totalTime, 
+                            'setup_time': data.setupTime, 'nx_time': data.nxTime, 'admm_time': data.admmTime, 
+                            'update_y_time': data.updateYTime, 'update_z_time': data.updateZTime, 
+                            'update_lagrange_time': data.updateLagrangeTime, 
+                            'update_residual_time': data.updateResidualTime, 
+                            'update_cost_time': data.updateCostTime})
 
 # Y vector minimisation step
 def updateYVector(sol):
@@ -187,6 +226,30 @@ def displayIteration(i, sol):
     str = "|  {:4}  |  {:9.2e}  |  {:9.2e}  |  {:9.2e}  |  {:9.2e}  |"
     cost = sol.objectiveCost if sol.objectiveCost else float('inf')
     print(str.format(i, cost, sol.iterationPrimalResidual, sol.iterationDualResidual, sol.time.elapsed))
+
+
+# Append required iteration data
+def appendIterationData(i, sol):
+    sol.data.iteration.append(i)
+    sol.data.objectiveCost.append(sol.objectiveCost)
+    sol.data.primalResidual.append(sol.iterationPrimalResidual)
+    sol.data.dualResidual.append(sol.iterationDualResidual)
+    sol.data.time.append(sol.time.elapsed)
+
+
+# Gathers overall ADMM data to be ready for exporting
+def appendFinalData(sol):
+    sol.data.totalTime = sol.time.elapsed
+    sol.data.setupTime = sol.time.setupTime
+    sol.data.nxTime = sol.time.findCliques
+    sol.data.admmTime = sol.time.elapsed-sol.time.setupTime
+
+    sol.data.updateYTime = sol.time.updateY
+    sol.data.updateZTime = sol.time.updateZ
+    sol.data.updateLagrangeTime = sol.time.updateLagrangeMultipliers
+    sol.data.updateResidualTime = sol.time.updateResiduals
+    sol.data.updateCostTime = sol.time.calculateCost
+
 
 # Prints the header for solver
 def printHeader():

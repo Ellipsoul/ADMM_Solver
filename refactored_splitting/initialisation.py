@@ -9,7 +9,13 @@ from solver import admmCliqueSplitting
 import time
 
 # Read data from file
-mat_fname = './../popData/pop_data.mat'
+numEl = 10
+numElStr = str(numEl)
+omega = 1
+omegaStr = str(omega)
+pop_problem = f'_{numElStr}_{omegaStr}.mat'
+mat_fname = f'./../popData/pop_data{pop_problem}'
+
 mat_contents = sio.loadmat(mat_fname, struct_as_record=False)
 
 # Data extraction
@@ -20,7 +26,7 @@ c = mat_contents['c']        # c
 K = mat_contents['K'][0,0]   # Class object with attributes f, l, q and s
 
 # Call the solver
-solution = admmCliqueSplitting(At, b, c, K)
+solution = admmCliqueSplitting(At, b, c, K, numEl, omega)
 print("|  Update Global Y Vector,      time: ", solution.time.updateY)
 print("|  Update Z Projection,         time: ", solution.time.updateZ)
 print("|  Update Local S Vectors,      time: ", solution.time.updateS)

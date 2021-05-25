@@ -2,6 +2,7 @@ import scipy
 from scipy.sparse import csc_matrix, kron, vstack, csr_matrix, dia_matrix, identity, csc_matrix, lil_matrix
 from scipy.sparse.linalg import inv
 from sksparse.cholmod import cholesky
+from statistics import mean
 import math
 import chompack as cp
 from cvxopt import spmatrix, amd
@@ -30,6 +31,10 @@ class SolutionStructure:
         self.options = options                                       # Options
         self.cliqueComponents, self.time.findCliques = detectCliques(At, b, c, K, options)  # Detect the cliques!
         self.ncliques = len(self.cliqueComponents)
+
+        # Initialise data to be stored into csv
+        avgCliqueSize = [mean([clique.At.shape[0] for clique in self.cliqueComponents]), mean([clique.At.shape[1] for clique in self.cliqueComponents])]
+        self.data = Data(At.shape, self.options.relTol, self.ncliques, avgCliqueSize)
 
         self.objectiveCost = None                      # Initialise cost (will be updated at each iteration)
         self.iterationPrimalResidual = float("inf")    # Initialise iteration max primal residual
@@ -76,8 +81,6 @@ class CliqueComponent:
         # Generate matrix: L = rho_i*Pt*P (static if rho kept constant)
         self.L = self.rho * self.Pt * self.P                      
         # Generate matrix: R = rho * I + sigma * A * At (static if rho and sigma kept constant), and its inverse
-        print(self.At.shape)
-        print(self.s.shape)
         self.R = csc_matrix(self.rho * identity(len(self.s)) + self.sigma * (self.A * self.At))
         # Cholesky factorisation for most efficient system of equations solution
         self.KKt = cholesky(self.R, 0)
@@ -143,6 +146,37 @@ class CPUTime:
         self.calculateCost = 0.0
 
         self.temp = 0.0  # Use this to test time specific parts of the solver
+
+
+# Data to be written to a file
+class Data:
+    def __init__(self, problemSize, relTol, nCliques, avgCliqueSize):
+        # Values to be stored at every iteration
+        self.iteration = []
+        self.objectiveCost = []
+        self.primalResidual = []
+        self.dualResidual = []
+        self.time = []
+
+        # Values stored at conclusion of algorithm
+        self.totalTime = None
+        self.setupTime = None
+        self.nxTime = None
+        self.admmTime = None
+        
+        self.updateYTime = None
+        self.updateZTime = None
+        self.updateLagrangeTime = None
+        self.updateResidualTime = None
+        self.updateCostTime = None
+
+        # Static values
+        self.relTol = relTol
+        self.problemSize = problemSize
+        self.nCliques = nCliques
+        self.avgCliqueSize = avgCliqueSize
+        self.numEl = None   # Will be passed in later
+        self.omega = None
 
 
 # Helper function to vectorise a matrix, taking in a sparse matrix
@@ -308,7 +342,6 @@ def detectCliques(At, b, c, K, options):
     cliqueComponents = []
     for i in range(len(cliques)):
         cliqueComponent = CliqueComponent(At_sparse[i], b_sparse[i], c_sparse[i], K_sparse[i], P_sparse[i], options)
-        print(cliqueComponent)
         cliqueComponents.append(cliqueComponent)
 
     return cliqueComponents, nxTime

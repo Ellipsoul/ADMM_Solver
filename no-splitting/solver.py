@@ -125,7 +125,7 @@ def admmSolverNoSplitting(At, b, c, K):
     for i in range(options.maxIter):
 
         # Print
-        if i%options.dispIter==0 or i+1==options.maxIter:
+        if (i%options.dispIter==0 or i+1==options.maxIter or i==1) and i!=0:
             displayIteration(i, sol)
 
         # Are we done?
