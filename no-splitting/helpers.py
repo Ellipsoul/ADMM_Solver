@@ -9,7 +9,7 @@ from sksparse.cholmod import cholesky_AAt
 ################################################################################
 # Class to store solution variables
 class solStructure:
-    def __init__(self, At, b, c, K, options):
+    def __init__(self, At, b, c, K, options, numEl, omega):
         self.A = At.transpose()
         self.bt = b.transpose()
 
@@ -38,6 +38,9 @@ class solStructure:
         # Factorization of system matrix
         self.KKT = cholesky_AAt( csc_matrix(self.A), 0.0 )
 
+        # Data
+        self.data = Data(problemSize=At.shape, relTol=options.relTol, numEl=numEl, omega=omega)
+
 
 ################################################################################
 # Class to store CPU times
@@ -50,11 +53,36 @@ class CPUTime:
         self.updateY = 0.0
         self.updateZ = 0.0
 
+################################################################################
+# Data to be written to a file
+class Data:
+    def __init__(self, problemSize, relTol, numEl, omega):
+        # Values to be stored at every iteration
+        self.iteration = []
+        self.objectiveCost = []
+        self.primalResidual = []
+        self.dualResidual = []
+        self.time = []
+
+        # Values stored at conclusion of algorithm
+        self.totalTime = None
+        self.setupTime = None
+        self.admmTime = None
+        
+        self.updateYTime = None
+        self.updateZTime = None
+        self.updateLagrangeTime = None
+
+        # Static values
+        self.relTol = relTol
+        self.problemSize = problemSize
+        self.numEl = numEl
+        self.omega = omega
 
 ################################################################################
 # Class of options
 class Options:
-    def __init__(self, rho=10, relTol=1.0e-06, maxIter=10000, dispIter=50):
+    def __init__(self, rho=10, relTol=1.0e-03, maxIter=10000, dispIter=50):
         self.rho = rho                      # Penalty parameter
         self.relTol = relTol                # Relative tolerance
         self.maxIter = maxIter              # Maximum number of iterations

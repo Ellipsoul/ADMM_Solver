@@ -116,7 +116,7 @@ class CliqueComponent:
 
 # Class of options
 class Options:
-    def __init__(self, rho=10, sigma=10, lamb=0.5, relTol=1.0e-06, maxIter=1000, dispIter=50):
+    def __init__(self, rho=10, sigma=10, lamb=0.5, relTol=1.0e-03, maxIter=10000, dispIter=50):
         self.rho = rho                      # Penalty parameter 1
         self.sigma = sigma                  # Penalty parameter 2
         self.lamb = lamb                    # Weighting between large vector optimisation and clique optimisation

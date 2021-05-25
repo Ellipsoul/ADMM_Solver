@@ -6,7 +6,12 @@ import numpy as np
 from solver import admmSolverNoSplitting
 
 # Read data from file
-mat_fname = './../popData/pop_data.mat'
+numEl = 10
+numElStr = str(numEl)
+omega = 1
+omegaStr = str(omega)
+pop_problem = f'_{numElStr}_{omegaStr}.mat'
+mat_fname = f'./../popData/pop_data{pop_problem}'
 mat_contents = sio.loadmat(mat_fname, struct_as_record=False)
 
 # Data extraction
@@ -17,7 +22,7 @@ c = mat_contents['c']        # c
 K = mat_contents['K'][0,0]   # Class object with attributes f, l, q and s
 
 # Call solver
-sol = admmSolverNoSplitting(At, b, c, K)
+sol = admmSolverNoSplitting(At, b, c, K, numEl, omega)
 print("Update Y, time: ", sol.time.updateY)
 print("Update Z, time: ", sol.time.updateZ)
 print("Update X, time: ", sol.time.updateX)
