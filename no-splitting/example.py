@@ -5,8 +5,13 @@ import matplotlib.pylab as plt
 import numpy as np
 from solver import admmSolverNoSplitting
 
+# POP Problems will be run from:
+# omega = 3, 3-4
+# omega = 2, 3-15
+# omega = 1, 3-101
+
 # Read data from file
-numEl = 10
+numEl = 3
 numElStr = str(numEl)
 omega = 1
 omegaStr = str(omega)

@@ -50,9 +50,10 @@ def admmCliqueSplitting(At, b, c, K, numEl, omega):
         sol.time.calculateCost += timeit.default_timer() - t0  # Time the step
 
     # Wrap up main function
-    displayIteration(i, sol)   # Final Iteration display
-    appendFinalData(sol)       # Gather data to be exported as csv
-    exportDataToCSV(sol.data)  # Export csv data
+    displayIteration(i, sol)     # Final Iteration display
+    appendIterationData(i, sol)  # Append data for final iteration
+    appendFinalData(sol)         # Gather data to be exported as csv
+    exportDataToCSV(sol.data)    # Export csv data
     print("|----------------------------------------------------------------|")
     print("|     CPU time (s) = {:9.2e}".format(sol.time.elapsed))
     print("|   Setup time (s) = {:9.2e}".format(sol.time.setupTime))

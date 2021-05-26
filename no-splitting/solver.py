@@ -37,6 +37,8 @@ def updateZ(sol, At, b, c, K, options):
 
 # Helper for conic projection of full vector
 def projectCones(vector, K):
+    K.f = int(K.f)
+    K.l = int(K.l)
     projectZeroCone(vector[:K.f, 0])                     # Pass zero cone portion to helper
     projectNNOrthantCone(vector[K.f:K.f+K.l, 0])   # Pass NN Orthant portion to helper
     ptr = K.f+K.l
@@ -146,6 +148,7 @@ def admmSolverNoSplitting(At, b, c, K, numEl, omega):
 
     # Terminate main function
     displayIteration(i, sol)
+    appendIterationData(i, sol)  # Append data for final iteration
     appendFinalData(sol)
     exportDataToCSV(sol.data)
     print("|----------------------------------------------------------------|")

@@ -196,6 +196,9 @@ def detectCliques(At, b, c, K, options):
     nConstraints = int(K.f) + int(K.l) + int(len(K.s))   # Helper to track number of constraints
     nCols = At.shape[1]                   # Useful later for P matrix construction
 
+    K.f = int(K.f)
+    K.l = int(K.l)
+
     # Initialise array of constraint components
     constraints = [None for _ in range(nConstraints)]
 
