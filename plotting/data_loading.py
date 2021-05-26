@@ -39,6 +39,10 @@ for key in keyArray:
 noSplittingMetaData = pd.concat(noSplittingMetaData.values())
 splittingMetaData = pd.concat(splittingMetaData.values())
 
+# Create new column with real number of elements
+noSplittingMetaData['num_el_real'] = noSplittingMetaData['num_el'].apply(lambda i: 2*(i-1))
+splittingMetaData['num_el_real'] = splittingMetaData['num_el'].apply(lambda i: 2*(i-1))
+
 # Store the data to be imported (it's slow because of pickling though)
 with open("allData.pk", 'wb') as fi:
     pickle.dump([noSplittingIterationData, noSplittingMetaData, splittngIterationData, splittingMetaData], fi)
