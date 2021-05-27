@@ -671,7 +671,7 @@ plt.suptitle("Clique Detection Time vs Number of Independent Variables", fontpro
 # Lables and legend
 plt.xlabel("# Independent Variables", fontsize=10)
 plt.ylabel("Clique Detection Time (s)", fontsize=10)
-# plt.legend(["No Splitting", "Splitting"], loc=0)
+plt.legend([r"$\omega=1$", r"$\omega=2$", r"$\omega=3$"], loc=0)
 
 # Limits and interval ticks
 # plt.xlim(0, 205)
