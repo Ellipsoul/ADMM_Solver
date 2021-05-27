@@ -1037,7 +1037,7 @@ plt.pie(array, normalize=True, labels=labels, explode=explode, autopct='%.2f')
 titleDict = { 'size': 12, 'weight': 'semibold'}
 plt.suptitle("CPU Time Distribution", fontproperties=titleDict, y=0.95)
 subtitleDict = { 'fontsize': 9, 'fontweight': 'normal', 'verticalalignment': 'baseline'}
-plt.title(r"$\omega=1$, 40 Independent Variables, No Splitting", fontdict=subtitleDict, pad=0)
+plt.title(r"$\omega=1$, 100 Independent Variables, No Splitting", fontdict=subtitleDict, pad=0)
 
 # Grid and housekeeping
 plt.savefig('./images/pie_51_1_nosplitting.png', bbox_inches='tight')
