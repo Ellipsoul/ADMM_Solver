@@ -43,6 +43,9 @@ splittingMetaData = pd.concat(splittingMetaData.values())
 noSplittingMetaData['num_el_real'] = noSplittingMetaData['num_el'].apply(lambda i: 2*(i-1))
 splittingMetaData['num_el_real'] = splittingMetaData['num_el'].apply(lambda i: 2*(i-1))
 
+# Create new column for 'update S' which makes up the remaining time
+splittingMetaData['update_s_time'] = splittingMetaData['total_time'] - splittingMetaData['setup_time'] - splittingMetaData['update_y_time'] - splittingMetaData['update_z_time'] - splittingMetaData['update_lagrange_time'] - splittingMetaData['update_residual_time'] - splittingMetaData['update_cost_time']
+
 # Store the data to be imported (it's slow because of pickling though)
 with open("allData.pk", 'wb') as fi:
     pickle.dump([noSplittingIterationData, noSplittingMetaData, splittngIterationData, splittingMetaData], fi)
