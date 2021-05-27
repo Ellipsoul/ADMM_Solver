@@ -127,7 +127,7 @@ plt.close()
 #-------------------------------------------------------------------------------------------------------------------
 """
 - Primal Residual vs Iteration
-- Dual Residaul vs Iteration. 
+- Dual Residual vs Iteration. 
 Plot for splitting and no-splitting, plot several images for different problem sizes
 """
 
@@ -698,7 +698,7 @@ Splitting still takes more time because it needs to update the local vector with
 plt.figure(figsize=(7, 5), dpi=120)
 
 # Processing and plotting
-df1 = noSplittingMetaData.loc[splittingMetaData["omega"]==1]
+df1 = noSplittingMetaData.loc[noSplittingMetaData["omega"]==1]
 df2 = splittingMetaData.loc[splittingMetaData["omega"]==1]
 
 plt.plot(df1['num_el_real'], df1['update_y_time'], '+--', linewidth=1.5, markersize=5)
@@ -734,7 +734,7 @@ plt.close()
 plt.figure(figsize=(7, 5), dpi=120)
 
 # Processing and plotting
-df1 = noSplittingMetaData.loc[splittingMetaData["omega"]==2]
+df1 = noSplittingMetaData.loc[noSplittingMetaData["omega"]==2]
 df2 = splittingMetaData.loc[splittingMetaData["omega"]==2]
 
 plt.plot(df1['num_el_real'], df1['update_y_time'], '+--', linewidth=1.5, markersize=5)
@@ -776,7 +776,7 @@ Need to comment on the difference, and mention that with a for loop/non-parallel
 plt.figure(figsize=(7, 5), dpi=120)
 
 # Processing and plotting
-df1 = noSplittingMetaData.loc[splittingMetaData["omega"]==1]
+df1 = noSplittingMetaData.loc[noSplittingMetaData["omega"]==1]
 df2 = splittingMetaData.loc[splittingMetaData["omega"]==1]
 
 plt.plot(df1['num_el_real'], df1['update_z_time'], '+--', linewidth=1.5, markersize=5)
@@ -812,7 +812,7 @@ plt.close()
 plt.figure(figsize=(7, 5), dpi=120)
 
 # Processing and plotting
-df1 = noSplittingMetaData.loc[splittingMetaData["omega"]==2]
+df1 = noSplittingMetaData.loc[noSplittingMetaData["omega"]==2]
 df2 = splittingMetaData.loc[splittingMetaData["omega"]==2]
 
 plt.plot(df1['num_el_real'], df1['update_z_time'], '+--', linewidth=1.5, markersize=5)
@@ -853,7 +853,7 @@ Splitting and no splitting, same as above
 plt.figure(figsize=(7, 5), dpi=120)
 
 # Processing and plotting
-df1 = noSplittingMetaData.loc[splittingMetaData["omega"]==1]
+df1 = noSplittingMetaData.loc[noSplittingMetaData["omega"]==1]
 df2 = splittingMetaData.loc[splittingMetaData["omega"]==1]
 
 plt.plot(df1['num_el_real'], df1['update_lagrange_time'], '+--', linewidth=1.5, markersize=5)
@@ -889,7 +889,7 @@ plt.close()
 plt.figure(figsize=(7, 5), dpi=120)
 
 # Processing and plotting
-df1 = noSplittingMetaData.loc[splittingMetaData["omega"]==2]
+df1 = noSplittingMetaData.loc[noSplittingMetaData["omega"]==2]
 df2 = splittingMetaData.loc[splittingMetaData["omega"]==2]
 
 plt.plot(df1['num_el_real'], df1['update_lagrange_time'], '+--', linewidth=1.5, markersize=5)
@@ -1251,4 +1251,44 @@ plt.savefig('./images/pie_4_3_splitting.png', bbox_inches='tight')
 # plt.show()
 plt.close()
 
-###################################################################################################################
+#-------------------------------------------------------------------------------------------------------------------
+"""
+- Update s Time vs numEl
+Splitting only, extra plot that was initially missed
+"""
+
+# Figure 21
+# Plot for omega=1
+plt.figure(figsize=(7, 5), dpi=120)
+
+# Processing and plotting
+df1 = splittingMetaData.loc[splittingMetaData["omega"]==1]
+df2 = splittingMetaData.loc[splittingMetaData["omega"]==2]
+df3 = splittingMetaData.loc[splittingMetaData["omega"]==3]
+
+plt.plot(df1['num_el_real'], df1['update_s_time'], '+--', linewidth=1.5, markersize=5)
+plt.plot(df2['num_el_real'], df2['update_s_time'], '+--', linewidth=1.5, markersize=5)
+plt.plot(df3['num_el_real'], df3['update_s_time'], '+--', linewidth=1.5, markersize=5)
+
+# Title
+titleDict = { 'size': 12, 'weight': 'semibold'}
+plt.suptitle("Update s Vector Time vs Number of Independent Variables", fontproperties=titleDict, y=0.96)
+subtitleDict = { 'fontsize': 9, 'fontweight': 'normal', 'verticalalignment': 'baseline'}
+plt.title(r"Splitting only", fontdict=subtitleDict, pad=7)
+
+# Lables and legend
+plt.xlabel("# Independent Variables", fontsize=10)
+plt.ylabel("Update s Vector Time (s)", fontsize=10)
+plt.legend([r"$\omega=1$", r"$\omega=2$", r"$\omega=3$"], loc=0)
+
+# Limits and interval ticks
+# plt.xlim(0, 205)
+# plt.ylim(0, 102)
+# plt.xticks(np.arange(0, 205, 20))
+# plt.yticks(np.arange(0, 102, 10))
+
+# Grid and housekeeping
+plt.grid(linestyle="--", linewidth=0.5)
+plt.savefig('./images/updatestime_vs_numel.png')
+# plt.show()
+plt.close()
