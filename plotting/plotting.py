@@ -1257,7 +1257,7 @@ plt.close()
 Splitting only, extra plot that was initially missed
 """
 
-# Figure 21
+# Figure 39
 # Plot for omega=1
 plt.figure(figsize=(7, 5), dpi=120)
 

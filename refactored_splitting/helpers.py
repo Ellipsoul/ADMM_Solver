@@ -8,6 +8,7 @@ import chompack as cp
 from cvxopt import spmatrix, amd
 
 import timeit
+import sys
 
 import numpy as np
 import multiprocessing as mp
@@ -249,9 +250,14 @@ def detectCliques(At, b, c, K, options):
 
     # Find cliques
     S = AtCollapsed.transpose() * AtCollapsed              # Generate matrix of codependencies
-    I, J = np.nonzero(S)
-    AA = spmatrix(1.0, I, J)
-    symb = cp.symbolic(AA, p=amd.order)
+    # I, J = np.nonzero(S)
+    # AA = spmatrix(1.0, I, J)
+    # symb = cp.symbolic(AA, p=amd.order)
+
+    # Finding the sparsity of the (testing purposes only)
+    # print(S.count_nonzero())
+    # print(S.shape[0] * S.shape[1])
+    # sys.exit()
 
     # NetworkX implementation (no longer in use)
     G = nx.Graph(S)                                      # Initialise NetworkX graph

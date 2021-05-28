@@ -200,7 +200,7 @@ def updateLagrangeMultipliers(sol):
 
         # Update local primal residual
         clique.primalResidualLocal = np.linalg.norm(clique.c - clique.At * clique.s - clique.z)
-      
+
     sol.time.updateLagrangeMultipliers += timeit.default_timer() - t0  # Time the step
 
 
