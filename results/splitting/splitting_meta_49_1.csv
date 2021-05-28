@@ -1,0 +1,2 @@
+num_el,omega,rel_tol,problem_numrows,problem_numcols,n_cliques,avg_clique_numrows,avg_clique_numcols,total_time,setup_time,nx_time,admm_time,update_y_time,update_z_time,update_lagrange_time,update_residual_time,update_cost_time
+49,1,0.001,2914,612,46,75,27,362.885452306,1.3972658900000001,0.480108337,361.48818641599996,37.694408362999376,72.59717778200161,78.01212676900235,42.73129152000007,0.6994170890018534

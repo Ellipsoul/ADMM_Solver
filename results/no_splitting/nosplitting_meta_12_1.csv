@@ -1,0 +1,2 @@
+num_el,omega,rel_tol,problem_numrows,problem_numcols,total_time,setup_time,admm_time,update_y_time,update_z_time,update_lagrange_time
+12,1,0.001,583,131,16.438589045999997,0.0018770739999999786,16.436711971999998,2.7417100609999387,11.098941022999984,1.3775333290000003

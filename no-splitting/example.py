@@ -11,7 +11,7 @@ from solver import admmSolverNoSplitting
 # omega = 1, 3-101
 
 # Read data from file
-numEl = 3
+numEl = 5
 numElStr = str(numEl)
 omega = 1
 omegaStr = str(omega)

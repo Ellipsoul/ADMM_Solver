@@ -14,7 +14,7 @@ import time
 # omega = 1, 3-101
 
 # Read data from file
-numEl = 91
+numEl = 5
 numElStr = str(numEl)
 omega = 1
 omegaStr = str(omega)
