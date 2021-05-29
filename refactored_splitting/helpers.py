@@ -254,18 +254,13 @@ def detectCliques(At, b, c, K, options):
     # AA = spmatrix(1.0, I, J)
     # symb = cp.symbolic(AA, p=amd.order)
 
-    # Finding the sparsity of the (testing purposes only)
-    # print(S.count_nonzero())
-    # print(S.shape[0] * S.shape[1])
-    # sys.exit()
-
     # NetworkX implementation (no longer in use)
     G = nx.Graph(S)                                      # Initialise NetworkX graph
     # G.remove_edges_from(nx.selfloop_edges(G))            # Remove self_loops from graph (for chordal_graph_cliques)
     
     t1 = timeit.default_timer()
 
-    # chompack implementation
+    # chompack implementation attempt
     # reOrderedCliques = symb.cliques()
     # ip = np.array(list(symb.ip))
     # for i in range(len(reOrderedCliques)):

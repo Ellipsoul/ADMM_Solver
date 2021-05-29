@@ -1303,7 +1303,7 @@ Plot the proportion of time distribution as it changes with number of independen
 Do this for omega=1 and omega=2, for a total of 4 plots
 """
 
-
+"""
 # Figure 40
 # Plot for omega=1, no splitting
 plt.figure(figsize=(7, 5), dpi=120)
@@ -1338,9 +1338,9 @@ plt.grid(linestyle="--", linewidth=0.5)
 plt.savefig('./images/prop_nosplitting_omega1.png')
 plt.show()
 plt.close()
-
+"""
 ###################################################################################################################
-
+"""
 # Figure 41
 # Plot for omega=2, no splitting
 plt.figure(figsize=(7, 5), dpi=120)
@@ -1375,9 +1375,9 @@ plt.grid(linestyle="--", linewidth=0.5)
 plt.savefig('./images/prop_nosplitting_omega2.png')
 plt.show()
 plt.close()
-
+"""
 ###################################################################################################################
-
+"""
 # Figure 42
 # Plot for omega=1, no splitting
 plt.figure(figsize=(7, 5), dpi=120)
@@ -1415,9 +1415,9 @@ plt.grid(linestyle="--", linewidth=0.5)
 plt.savefig('./images/prop_splitting_omega1.png')
 plt.show()
 plt.close()
-
+"""
 ###################################################################################################################
-
+"""
 # Figure 43
 # Plot for omega=2, splitting
 plt.figure(figsize=(7, 5), dpi=120)
@@ -1455,5 +1455,5 @@ plt.grid(linestyle="--", linewidth=0.5)
 plt.savefig('./images/prop_splitting_omega2.png')
 plt.show()
 plt.close()
-
+"""
 #-------------------------------------------------------------------------------------------------------------------
