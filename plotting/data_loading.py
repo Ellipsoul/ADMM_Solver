@@ -60,6 +60,9 @@ splittingMetaData['residual_prop'] = splittingMetaData['update_residual_time'] /
 splittingMetaData['cost_prop'] = splittingMetaData['update_cost_time'] / splittingMetaData['total_time']
 splittingMetaData['setup_prop'] = splittingMetaData['setup_time'] / splittingMetaData['total_time']
 
+aMatrixSparsity = pd.read_csv('../results/a_matrix_sparsity.csv')
+aMatrixSparsity['num_el_real'] = 2 * (aMatrixSparsity['num_el'] - 1)
+
 # Store the data to be imported (it's slow because of pickling though)
 with open("allData.pk", 'wb') as fi:
-    pickle.dump([noSplittingIterationData, noSplittingMetaData, splittngIterationData, splittingMetaData], fi)
+    pickle.dump([noSplittingIterationData, noSplittingMetaData, splittngIterationData, splittingMetaData, aMatrixSparsity], fi)

@@ -7,7 +7,7 @@ import timeit
 
 # Loading the pickled data back
 with open('allData.pk', 'rb') as fi:
-    noSplittingIterationData, noSplittingMetaData, splittingIterationData, splittingMetaData = pickle.load(fi)
+    noSplittingIterationData, noSplittingMetaData, splittingIterationData, splittingMetaData, aMatrixSparsity = pickle.load(fi)
 
 
 # Start of Plots!
@@ -1457,3 +1457,74 @@ plt.show()
 plt.close()
 """
 #-------------------------------------------------------------------------------------------------------------------
+"""
+- Sparsity of A matrix
+Another 2 extra graphs (final)
+Separate for omega=1 and omega=2
+"""
+
+"""
+# Figure 44
+# Plot for omega=1
+plt.figure(figsize=(7, 5), dpi=120)
+
+# Processing and plotting
+print(aMatrixSparsity.columns)
+df = aMatrixSparsity.loc[aMatrixSparsity["omega"]==1]
+
+plt.plot(df['num_el_real'], df['nonzero_prop'], '+--', linewidth=1.5, markersize=5)
+
+# Title
+titleDict = { 'size': 12, 'weight': 'semibold'}
+plt.suptitle("A Matrix Sparsity vs Number of Independent Variables ", fontproperties=titleDict, y=0.96)
+subtitleDict = { 'fontsize': 9, 'fontweight': 'normal', 'verticalalignment': 'baseline'}
+plt.title(r"$\omega=1$", fontdict=subtitleDict, pad=7)
+
+# Lables and legend
+plt.xlabel("# Independent Variables", fontsize=10)
+plt.ylabel("Nonzero Element Proportion", fontsize=10)
+
+# Limits and interval ticks
+# plt.xlim(0, 205)
+# plt.ylim(0, 102)
+# plt.xticks(np.arange(0, 205, 20))
+# plt.yticks(np.arange(0, 102, 10))
+
+# Grid and housekeeping
+plt.grid(linestyle="--", linewidth=0.5)
+plt.savefig('./images/sparsity_omega1.png')
+plt.show()
+plt.close()
+"""
+###################################################################################################################
+
+# Figure 45
+# Plot for omega=2
+plt.figure(figsize=(7, 5), dpi=120)
+
+# Processing and plotting
+df = aMatrixSparsity.loc[aMatrixSparsity["omega"]==2]
+
+plt.plot(df['num_el_real'], df['nonzero_prop'], '+--', linewidth=1.5, markersize=5)
+
+# Title
+titleDict = { 'size': 12, 'weight': 'semibold'}
+plt.suptitle("A Matrix Sparsity vs Number of Independent Variables ", fontproperties=titleDict, y=0.96)
+subtitleDict = { 'fontsize': 9, 'fontweight': 'normal', 'verticalalignment': 'baseline'}
+plt.title(r"$\omega=2$", fontdict=subtitleDict, pad=7)
+
+# Lables and legend
+plt.xlabel("# Independent Variables", fontsize=10)
+plt.ylabel("Nonzero Element Proportion", fontsize=10)
+
+# Limits and interval ticks
+# plt.xlim(0, 205)
+plt.ylim(0, 1.05)
+# plt.xticks(np.arange(0, 205, 20))
+plt.yticks(np.arange(0, 1, 0.2))
+
+# Grid and housekeeping
+plt.grid(linestyle="--", linewidth=0.5)
+plt.savefig('./images/sparsity_omega2.png')
+plt.show()
+plt.close()
